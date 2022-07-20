@@ -1,2 +1,3 @@
 # RackMount
  
+MIT License
