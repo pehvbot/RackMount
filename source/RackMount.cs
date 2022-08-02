@@ -16,6 +16,8 @@ namespace RackMount
 
         private bool onLoad;
 
+        private int previousHashCode = 0;
+
         public override void OnLoad(ConfigNode node)
         {
             base.OnLoad(node);
@@ -43,6 +45,7 @@ namespace RackMount
 
             Fields["InventorySlots"].group = rackmountGroup;
             Fields["InventorySlots"].guiName = null;
+            previousHashCode = storedParts.Values.GetHashCode();
         }
 
         private void Update()
@@ -136,7 +139,7 @@ namespace RackMount
                     ProtoPartModuleSnapshot moduleSnapshot = storedPart.snapshot.FindModule(partModule, moduleIndex);
                     part.LoadModule(moduleSnapshot.moduleValues, ref moduleIndex);
 
-                    if(!onLoad)
+                    if (!onLoad)
                         moduleSnapshot.moduleValues.AddValue("modulePersistentId", partModule.GetPersistentId());
                 }
             }
@@ -158,11 +161,17 @@ namespace RackMount
 
             storedPart.snapshot.partData.SetValue("partRackmounted", true, true);
 
-            UIPartActionInventory inventoryUI = (UIPartActionInventory)part.PartActionWindow.ListItems.Find(x => x.GetType() == typeof(UIPartActionInventory));
-            inventoryUI.slotButton[storedPart.slotIndex].enabled = false;
+           
+            //UIPartActionInventory inventoryUI = (UIPartActionInventory)part.PartActionWindow.ListItems.Find(x => x.GetType() == typeof(UIPartActionInventory));
+            //inventoryUI.slotButton[storedPart.slotIndex].enabled = false;
+           
 
             BaseEvent button = (BaseEvent)Events.Find(x => x.name == "RackmountButton" + storedPart.slotIndex);
             button.guiName = "<b><color=red>Unmount</color> " + storedPart.snapshot.partInfo.title + "</b>";
+
+            UIPartActionWindow paw = part.PartActionWindow;
+            if (paw != null)
+                paw.UpdateWindow();
 
             part.ModulesOnActivate();
             part.ModulesOnStart();
@@ -208,15 +217,19 @@ namespace RackMount
 
             }
 
-            part.ModulesOnDeactivate();
-
             storedPart.snapshot.partData.SetValue("partRackmounted", false, true);
 
-            UIPartActionInventory inventoryUI = (UIPartActionInventory)part.PartActionWindow.ListItems.Find(x => x.GetType() == typeof(UIPartActionInventory));
-            inventoryUI.slotButton[storedPart.slotIndex].enabled = true;
+            //UIPartActionInventory inventoryUI = (UIPartActionInventory)part.PartActionWindow.ListItems.Find(x => x.GetType() == typeof(UIPartActionInventory));
+            //inventoryUI.slotButton[storedPart.slotIndex].enabled = true;
 
             BaseEvent button = (BaseEvent)Events.Find(x => x.name == "RackmountButton" + storedPart.slotIndex);
             button.guiName = "<b><color=green>Rackmount</color> " + storedPart.snapshot.partInfo.title + "</b>";
+
+            UIPartActionWindow paw = part.PartActionWindow;
+            if (paw != null)
+                paw.UpdateWindow();
+
+            part.ModulesOnDeactivate();
 
         }
     }
