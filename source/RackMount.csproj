@@ -40,6 +40,12 @@
     <Reference Include="UnityEngine.CoreModule">
       <HintPath>..\dlls_1_12_2\UnityEngine.CoreModule.dll</HintPath>
     </Reference>
+    <Reference Include="KSPAssets">
+      <HintPath>..\..\LRTF\LRTF\dlls_1_12_2\KSPAssets.dll</HintPath>
+    </Reference>
+    <Reference Include="UnityEngine.UIModule">
+      <HintPath>..\..\LRTF\LRTF\dlls_1_12_2\UnityEngine.UIModule.dll</HintPath>
+    </Reference>
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Properties\AssemblyInfo.cs" />
