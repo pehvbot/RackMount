@@ -10,13 +10,14 @@ namespace RackMount
 {
     public class ModuleRMInventoryPart : ModuleInventoryPart
     {
+        [KSPField]
+        public float evaDistance = 3;
+
         Dictionary<uint, int> rackMountableParts = new Dictionary<uint, int>();
 
         private BasePAWGroup rackmountGroup = new BasePAWGroup("rackmountGroup", "Rackmount Inventory", false);
 
         private bool onLoad;
-
-        private int previousHashCode = 0;
 
         public override void OnLoad(ConfigNode node)
         {
@@ -45,7 +46,24 @@ namespace RackMount
 
             Fields["InventorySlots"].group = rackmountGroup;
             Fields["InventorySlots"].guiName = null;
-            previousHashCode = storedParts.Values.GetHashCode();
+        }
+
+        public override void OnUpdate()
+        {
+            if (HighLogic.LoadedSceneIsFlight)
+            {
+                if (EngineerCheck())
+                {
+                    foreach (var button in Events.FindAll(x => x.name.Contains("RackmountButton")))
+                        button.active = true;
+                }
+                else
+                {
+                    foreach (var button in Events.FindAll(x => x.name.Contains("RackmountButton")))
+                        button.active = false;
+                }
+            }
+            base.OnUpdate();
         }
 
         private void Update()
@@ -69,6 +87,33 @@ namespace RackMount
             {
                 RemoveRackmountButtons(button.Key, button.Value);
             }
+
+            //locks mounted items
+            if (part.PartActionWindow != null)
+            {
+                UIPartActionInventory inventoryUI = (UIPartActionInventory)part.PartActionWindow.ListItems.Find(x => x.GetType() == typeof(UIPartActionInventory));
+                for (int i = 0; i < storedParts.Count; i++)
+                {
+                    bool mounted = false;
+                    storedParts.At(i).snapshot.partData.TryGetValue("partRackmounted", ref mounted);
+                    if (mounted)
+                        inventoryUI.slotButton[storedParts.At(i).slotIndex].enabled = false;
+                }
+            }
+            //checks for construction mode and locks/unlocks mounted items
+            UIPartActionInventory constructionUI = constructorModeInventory;
+            if (constructionUI != null)
+            {
+                for (int i = 0; i < storedParts.Count; i++)
+                {
+                    bool mounted = false;
+                    storedParts.At(i).snapshot.partData.TryGetValue("partRackmounted", ref mounted);
+                    if (mounted)
+                        constructionUI.slotButton[storedParts.At(i).slotIndex].enabled = false;
+                    else
+                        constructionUI.slotButton[storedParts.At(i).slotIndex].enabled = true;
+                }
+            }
         }
 
         //adds button for mounting and unmounting parts
@@ -90,6 +135,7 @@ namespace RackMount
                     guiActiveEditor = true,
                     guiActiveUnfocused = true,
                     guiActiveUncommand = true,
+                    unfocusedRange = evaDistance,
                     guiName = "<b><color=green>Rackmount</color> " + storedPart.snapshot.partInfo.title + "</b>"
                 };
                 BaseEvent RackmountButton = new BaseEvent(Events, mount.name, () => RackmountButtonPressed(storedPart), mount);
@@ -160,12 +206,7 @@ namespace RackMount
             }
 
             storedPart.snapshot.partData.SetValue("partRackmounted", true, true);
-
            
-            //UIPartActionInventory inventoryUI = (UIPartActionInventory)part.PartActionWindow.ListItems.Find(x => x.GetType() == typeof(UIPartActionInventory));
-            //inventoryUI.slotButton[storedPart.slotIndex].enabled = false;
-           
-
             BaseEvent button = (BaseEvent)Events.Find(x => x.name == "RackmountButton" + storedPart.slotIndex);
             button.guiName = "<b><color=red>Unmount</color> " + storedPart.snapshot.partInfo.title + "</b>";
 
@@ -176,7 +217,6 @@ namespace RackMount
             part.ModulesOnActivate();
             part.ModulesOnStart();
             part.ModulesOnStartFinished();
-
         }
 
         private void UnmountPart(StoredPart storedPart)
@@ -219,8 +259,9 @@ namespace RackMount
 
             storedPart.snapshot.partData.SetValue("partRackmounted", false, true);
 
-            //UIPartActionInventory inventoryUI = (UIPartActionInventory)part.PartActionWindow.ListItems.Find(x => x.GetType() == typeof(UIPartActionInventory));
-            //inventoryUI.slotButton[storedPart.slotIndex].enabled = true;
+            //unlocking always happens from paw?
+            UIPartActionInventory inventoryUI = (UIPartActionInventory)part.PartActionWindow.ListItems.Find(x => x.GetType() == typeof(UIPartActionInventory));
+            inventoryUI.slotButton[storedPart.slotIndex].enabled = true;
 
             BaseEvent button = (BaseEvent)Events.Find(x => x.name == "RackmountButton" + storedPart.slotIndex);
             button.guiName = "<b><color=green>Rackmount</color> " + storedPart.snapshot.partInfo.title + "</b>";
@@ -230,7 +271,25 @@ namespace RackMount
                 paw.UpdateWindow();
 
             part.ModulesOnDeactivate();
+        }
 
+        private bool EngineerCheck()
+        {
+            foreach(var c in vessel.GetVesselCrew())
+                if (c.trait == "Engineer")
+                    return true;
+
+            foreach (var v in FlightGlobals.VesselsLoaded)
+            {
+                if (v.isEVA)
+                {
+                    ProtoCrewMember member = v.GetVesselCrew()[0];
+                    float kerbalDistanceToPart = Vector3.Distance(v.transform.position, part.collider.ClosestPointOnBounds(v.transform.position));
+                    if (kerbalDistanceToPart < evaDistance && member.trait == "Engineer")
+                        return true;
+                } 
+            }
+            return false;
         }
     }
 }

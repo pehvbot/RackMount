@@ -46,6 +46,9 @@
     <Reference Include="UnityEngine.UIModule">
       <HintPath>..\..\LRTF\LRTF\dlls_1_12_2\UnityEngine.UIModule.dll</HintPath>
     </Reference>
+    <Reference Include="UnityEngine.PhysicsModule">
+      <HintPath>..\dlls_1_12_2\UnityEngine.PhysicsModule.dll</HintPath>
+    </Reference>
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Properties\AssemblyInfo.cs" />
