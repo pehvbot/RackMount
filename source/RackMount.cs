@@ -13,6 +13,9 @@ namespace RackMount
         [KSPField]
         public float evaDistance = 3;
 
+        [KSPField]
+        public bool requiresEngineer = true;
+
         Dictionary<uint, int> rackMountableParts = new Dictionary<uint, int>();
 
         private BasePAWGroup rackmountGroup = new BasePAWGroup("rackmountGroup", "Rackmount Inventory", false);
@@ -52,7 +55,7 @@ namespace RackMount
         {
             if (HighLogic.LoadedSceneIsFlight)
             {
-                if (EngineerCheck())
+                if (CrewPresent())
                 {
                     foreach (var button in Events.FindAll(x => x.name.Contains("RackmountButton")))
                         button.active = true;
@@ -150,7 +153,6 @@ namespace RackMount
 
         private void RemoveRackmountButtons(uint id, int slot)
         {
-
             Events.Find(x => x.name == "RackmountButton" + slot).active = false;
             Events.Remove(Events.Find(x => x.name == "RackmountButton" + slot));
 
@@ -273,22 +275,24 @@ namespace RackMount
             part.ModulesOnDeactivate();
         }
 
-        private bool EngineerCheck()
+        private bool CrewPresent()
         {
-            foreach(var c in vessel.GetVesselCrew())
-                if (c.trait == "Engineer")
+            //First check for kerbal on EVA.  If EVA doesn't qualify, return false.
+            if (FlightGlobals.ActiveVessel.isEVA)
+            {
+                ProtoCrewMember crew = FlightGlobals.ActiveVessel.GetVesselCrew()[0];
+                float kerbalDistanceToPart = Vector3.Distance(FlightGlobals.ActiveVessel.transform.position, part.collider.ClosestPointOnBounds(FlightGlobals.ActiveVessel.transform.position));
+                if (kerbalDistanceToPart < evaDistance && (!requiresEngineer || crew.trait == "Engineer"))
+                    return true;
+                else
+                    return false;
+            }
+
+            //Next check onboard crew
+            foreach (var crew in vessel.GetVesselCrew())
+                if (!requiresEngineer || crew.trait == "Engineer")
                     return true;
 
-            foreach (var v in FlightGlobals.VesselsLoaded)
-            {
-                if (v.isEVA)
-                {
-                    ProtoCrewMember member = v.GetVesselCrew()[0];
-                    float kerbalDistanceToPart = Vector3.Distance(v.transform.position, part.collider.ClosestPointOnBounds(v.transform.position));
-                    if (kerbalDistanceToPart < evaDistance && member.trait == "Engineer")
-                        return true;
-                } 
-            }
             return false;
         }
     }
