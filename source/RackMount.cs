@@ -8,6 +8,12 @@ using KSP.UI.Screens.Editor;
 
 namespace RackMount
 {
+    public class ModuleRackMount : PartModule
+    {
+        [KSPField]
+        public bool partRackmountable = true;
+    }
+
     public class ModuleRMInventoryPart : ModuleInventoryPart
     {
         [KSPField]
@@ -21,6 +27,7 @@ namespace RackMount
         private BasePAWGroup rackmountGroup = new BasePAWGroup("rackmountGroup", "Rackmount Inventory", false);
 
         private bool onLoad;
+
 
         public override void OnLoad(ConfigNode node)
         {
@@ -74,6 +81,7 @@ namespace RackMount
             List<uint> currentParts = new List<uint>();
             Dictionary<uint, int> buttonsToRemove = new Dictionary<uint, int>();
 
+            //looks for new parts
             for (int i = 0; i < storedParts.Count; i++)
             {
                 if (!rackMountableParts.ContainsKey(storedParts.At(i).snapshot.persistentId))
@@ -81,6 +89,7 @@ namespace RackMount
                 currentParts.Add(storedParts.At(i).snapshot.persistentId);
             }
 
+            //looks for removed parts
             foreach (KeyValuePair<uint, int> rackMountablePart in rackMountableParts)
             {
                 if (!currentParts.Contains(rackMountablePart.Key))
@@ -122,12 +131,10 @@ namespace RackMount
         //adds button for mounting and unmounting parts
         private void AddRackmountButtons(StoredPart storedPart)
         {
-            bool partRackMountable = false;
-            
             ConfigNode partConfig = storedPart.snapshot.partInfo.partConfig;
-            partConfig.TryGetValue("rackMountable", ref partRackMountable);
+            var p = storedPart.snapshot.modules.Find(x=>x.moduleName == "ModuleRackMount");
 
-            if (partRackMountable)
+            if (p!=null)
             {
                 rackMountableParts.Add(storedPart.snapshot.persistentId,storedPart.slotIndex);
 
@@ -208,7 +215,7 @@ namespace RackMount
             }
 
             storedPart.snapshot.partData.SetValue("partRackmounted", true, true);
-           
+
             BaseEvent button = (BaseEvent)Events.Find(x => x.name == "RackmountButton" + storedPart.slotIndex);
             button.guiName = "<b><color=red>Unmount</color> " + storedPart.snapshot.partInfo.title + "</b>";
 
@@ -216,14 +223,17 @@ namespace RackMount
             if (paw != null)
                 paw.UpdateWindow();
 
+            //magic?!  It works, don't know why
             part.ModulesOnActivate();
             part.ModulesOnStart();
             part.ModulesOnStartFinished();
-        }
 
+        }
         private void UnmountPart(StoredPart storedPart)
         {
             List<PartModule> removeModules = new List<PartModule>();
+
+            //likely needs a better way of storing/retrieving moduleValues
             if(HighLogic.LoadedSceneIsFlight)
                 GamePersistence.SaveGame("persistent.sfs", HighLogic.SaveFolder, SaveMode.BACKUP);
 
@@ -233,6 +243,7 @@ namespace RackMount
                 {
                     if (module.moduleValues.GetValue("modulePersistentId") == partModule.GetPersistentId().ToString())
                     {
+                        //moduleValues only accessible in flight?
                         if(HighLogic.LoadedSceneIsFlight)
                             module.moduleValues = partModule.snapshot.moduleValues;
                         removeModules.Add(partModule);
@@ -256,7 +267,6 @@ namespace RackMount
                     storedResource.amount -= resource.amount;
                     storedResource.maxAmount -= resource.maxAmount;
                 }
-
             }
 
             storedPart.snapshot.partData.SetValue("partRackmounted", false, true);
