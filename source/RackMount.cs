@@ -12,6 +12,23 @@ namespace RackMount
     {
         [KSPField]
         public bool partRackmountable = true;
+        public override void OnLoad(ConfigNode node)
+        {
+            base.OnLoad(node);
+            Bounds bounds = default(Bounds);
+            ModuleCargoPart cargo = (ModuleCargoPart)part.Modules.GetModule("ModuleCargoPart");
+
+            if (cargo != null)
+            {
+                if (cargo.packedVolume == 0)
+                {
+                    foreach (var bound in part.GetRendererBounds())
+                        bounds.Encapsulate(bound);
+                    float vol = ((float)Math.Round(bounds.size.x * bounds.size.y * bounds.size.z, 2));
+                    cargo.packedVolume = vol * 1000f;
+                }
+            }
+        }
     }
 
     public class ModuleRMInventoryPart : ModuleInventoryPart
@@ -22,15 +39,37 @@ namespace RackMount
         [KSPField]
         public bool requiresEngineer = true;
 
+        [KSPField]
+        public bool autoCalculateVolume = true;
+
+        [KSPField]
+        public float volumeAdjustPercent = 0.7f;
+
         Dictionary<uint, int> rackMountableParts = new Dictionary<uint, int>();
 
         private BasePAWGroup rackmountGroup = new BasePAWGroup("rackmountGroup", "Rackmount Inventory", false);
 
         private bool onLoad;
 
+        //needed to turn on vessel renaming when a command part is installed.
+        //For some reason putting it in OnUpdate() allows it to be displayed
+        //on load.
+        private bool displayVesselRenaming = false;
 
         public override void OnLoad(ConfigNode node)
         {
+            //checks for no volume set
+            if (autoCalculateVolume)
+            {
+                Bounds bounds = default(Bounds);
+                foreach (var bound in part.GetRendererBounds())
+                {
+                    bounds.Encapsulate(bound);
+                }
+                float vol = ((float)Math.Round(bounds.size.x * bounds.size.y * bounds.size.z * volumeAdjustPercent, 2));
+                packedVolumeLimit = vol * 1000f;
+                autoCalculateVolume = false;
+            }
             base.OnLoad(node);
             onLoad = true;
             if (storedParts != null)
@@ -56,12 +95,21 @@ namespace RackMount
 
             Fields["InventorySlots"].group = rackmountGroup;
             Fields["InventorySlots"].guiName = null;
+
         }
 
         public override void OnUpdate()
         {
             if (HighLogic.LoadedSceneIsFlight)
             {
+                //fugly way to display Vessel Renaming when ModuleCommand is
+                //mounted.
+                if (displayVesselRenaming)
+                {
+                    part.Events["SetVesselNaming"].guiActive = true;
+                    displayVesselRenaming = false;
+                }
+
                 if (CrewPresent())
                 {
                     foreach (var button in Events.FindAll(x => x.name.Contains("RackmountButton")))
@@ -194,6 +242,26 @@ namespace RackMount
                     ProtoPartModuleSnapshot moduleSnapshot = storedPart.snapshot.FindModule(partModule, moduleIndex);
                     part.LoadModule(moduleSnapshot.moduleValues, ref moduleIndex);
 
+                    //ModuleCommand fixes
+                    if(partModule.GetType() == typeof(ModuleCommand))
+                    {
+                        displayVesselRenaming = true;
+                        ModuleCommand c = (ModuleCommand)partModule;
+                        DictionaryValueList<string, ControlPoint> controlPoints = new DictionaryValueList<string, ControlPoint>();
+
+                        ControlPoint _default = new ControlPoint("_default", c.defaultControlPointDisplayName, part.transform, new Vector3(0, 0, 0));
+                        controlPoints.Add(_default.name, _default);
+                        foreach(var node in moduleConfigNode.GetNodes("CONTROLPOINT"))
+                        {
+                            Vector3 orientation = new Vector3(0, 0, 0);
+                            node.TryGetValue("orientation", ref orientation);
+                            ControlPoint point = new ControlPoint(node.GetValue("name"), node.GetValue("displayName"), part.transform, orientation);
+                            controlPoints.Add(point.name, point);
+                        }
+                        c.controlPoints = controlPoints;
+                    }
+
+                    //Modules loaded with OnLoad() already includes modulePersistentID from
                     if (!onLoad)
                         moduleSnapshot.moduleValues.AddValue("modulePersistentId", partModule.GetPersistentId());
                 }
@@ -227,7 +295,6 @@ namespace RackMount
             part.ModulesOnActivate();
             part.ModulesOnStart();
             part.ModulesOnStartFinished();
-
         }
         private void UnmountPart(StoredPart storedPart)
         {
@@ -248,6 +315,10 @@ namespace RackMount
                             module.moduleValues = partModule.snapshot.moduleValues;
                         removeModules.Add(partModule);
                         module.moduleValues.RemoveValue("modulePersistentId");
+                        if(module.GetType() == typeof(ModuleCommand))
+                        {
+                            part.Events["SetVesselNaming"].guiActive = false;
+                        }
                     }
                 }
             }
