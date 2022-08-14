@@ -1,27 +1,27 @@
-ModuleAblator
-ModuleActiveRadiator
-ModuleAnalysisResource
-ModuleAsteroidAnalysis
-ModuleBiomeScanner
-ModuleCometAnalysis
-ModuleCometDrill
-ModuleCommand
-ModuleDataTransmitter
-ModuleEnviroSensor
-ModuleExperienceManagement
-ModuleGPS
-ModuleGenerator
-ModuleKerbNetAccess
-ModuleOrbitalScanner
-ModuleOrbitalSurveyor
-ModuleReactionWheel
-ModuleResourceConverter
-ModuleResourceDrain
-ModuleResourceHarvester
-ModuleResourceIntake
-ModuleResourceScanner
-ModuleSAS
-ModuleScienceContainer
-ModuleScienceConverter
-ModuleScienceExperiment
-ModuleScienceLab
+ModuleAblator - works but useless maybe?
+ModuleActiveRadiator - untested, not relevant
+ModuleAnalysisResource - works
+ModuleAsteroidAnalysis - works
+ModuleBiomeScanner - works
+ModuleCometAnalysis - works
+ModuleCometDrill - untested not relevant
+ModuleCommand - works but requires extra logic
+ModuleDataTransmitter - works
+ModuleEnviroSensor - works
+ModuleExperienceManagement - works
+ModuleGPS - works
+ModuleGenerator - works
+ModuleKerbNetAccess - works
+ModuleOrbitalScanner - works but throws a NullReferenceException (no animation?)
+ModuleOrbitalSurveyor - works
+ModuleReactionWheel - works
+ModuleResourceConverter - works, even when on rails!
+ModuleResourceDrain - won't find resources to drain
+ModuleResourceHarvester - untested
+ModuleResourceIntake - untested, not relevant
+ModuleResourceScanner - works
+ModuleSAS -  works
+ModuleScienceContainer - works
+ModuleScienceConverter - unclear, ModuleScienceLab didn't work
+ModuleScienceExperiment - works
+ModuleScienceLab - doesn't work.  Problems with index for container and unload errors.
