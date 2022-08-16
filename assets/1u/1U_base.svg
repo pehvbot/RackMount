@@ -1,0 +1,44 @@
+<?xml version="1.0" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" 
+  "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<svg width="1024" height="1024" viewBox="0 0 1024 1024"
+     xmlns="http://www.w3.org/2000/svg" version="1.1">
+<desc>1U_base.blend, (Blender 3.2.2)</desc>
+<polygon stroke="black" stroke-width="1" fill="rgb(204, 204, 204)" fill-opacity="0.25" points="119.030,61.026 119.030,492.295 124.096,492.295 124.096,61.026 " />
+<polygon stroke="black" stroke-width="1" fill="rgb(204, 204, 204)" fill-opacity="0.25" points="983.791,499.531 943.581,499.531 943.581,1024.000 983.791,1024.000 " />
+<polygon stroke="black" stroke-width="1" fill="rgb(204, 204, 204)" fill-opacity="0.25" points="926.215,1016.764 489.157,1016.764 489.157,1024.000 926.215,1024.000 " />
+<polygon stroke="black" stroke-width="1" fill="rgb(204, 204, 204)" fill-opacity="0.25" points="1024.000,499.531 983.791,499.531 983.791,1024.000 1024.000,1024.000 " />
+<polygon stroke="black" stroke-width="1" fill="rgb(204, 204, 204)" fill-opacity="0.25" points="17.366,492.295 17.367,1016.764 454.424,1016.764 454.424,492.295 " />
+<polygon stroke="black" stroke-width="1" fill="rgb(204, 204, 204)" fill-opacity="0.25" points="926.215,1016.764 926.215,492.295 489.157,492.295 489.157,1016.764 " />
+<polygon stroke="black" stroke-width="1" fill="rgb(204, 204, 204)" fill-opacity="0.25" points="983.791,45.107 943.581,45.107 943.581,482.164 983.791,482.164 " />
+<polygon stroke="black" stroke-width="1" fill="rgb(204, 204, 204)" fill-opacity="0.25" points="943.581,45.107 983.791,45.107 983.791,27.740 943.581,27.740 " />
+<polygon stroke="black" stroke-width="1" fill="rgb(204, 204, 204)" fill-opacity="0.25" points="489.157,1024.000 489.157,1016.764 471.791,1016.764 471.791,1024.000 " />
+<polygon stroke="black" stroke-width="1" fill="rgb(204, 204, 204)" fill-opacity="0.25" points="454.424,1016.764 17.367,1016.764 17.367,1024.000 454.424,1024.000 " />
+<polygon stroke="black" stroke-width="1" fill="rgb(204, 204, 204)" fill-opacity="0.25" points="166.065,492.295 166.065,452.085 158.829,452.085 158.829,492.295 " />
+<polygon stroke="black" stroke-width="1" fill="rgb(204, 204, 204)" fill-opacity="0.25" points="141.462,492.295 141.462,452.085 124.096,452.085 124.096,492.295 " />
+<polygon stroke="black" stroke-width="1" fill="rgb(204, 204, 204)" fill-opacity="0.25" points="926.215,1016.764 926.215,1024.000 943.581,1024.000 943.581,1016.764 " />
+<polygon stroke="black" stroke-width="1" fill="rgb(204, 204, 204)" fill-opacity="0.25" points="17.367,1024.000 17.367,1016.764 0.000,1016.764 0.000,1024.000 " />
+<polygon stroke="black" stroke-width="1" fill="rgb(204, 204, 204)" fill-opacity="0.25" points="166.065,452.085 166.065,492.295 173.301,492.295 173.301,452.085 " />
+<polygon stroke="black" stroke-width="1" fill="rgb(204, 204, 204)" fill-opacity="0.25" points="454.424,1016.764 454.424,1024.000 471.791,1024.000 471.791,1016.764 " />
+<polygon stroke="black" stroke-width="1" fill="rgb(204, 204, 204)" fill-opacity="0.25" points="983.791,482.164 943.581,482.164 943.581,499.531 983.791,499.531 " />
+<polygon stroke="black" stroke-width="1" fill="rgb(204, 204, 204)" fill-opacity="0.25" points="141.462,452.085 141.462,492.295 158.829,492.295 158.829,452.085 " />
+<polygon stroke="black" stroke-width="1" fill="rgb(204, 204, 204)" fill-opacity="0.25" points="2.894,489.400 2.894,58.132 0.000,55.237 0.000,492.295 " />
+<polygon stroke="black" stroke-width="1" fill="rgb(204, 204, 204)" fill-opacity="0.25" points="37.315,489.400 2.894,489.400 0.000,492.295 40.209,492.295 " />
+<polygon stroke="black" stroke-width="1" fill="rgb(204, 204, 204)" fill-opacity="0.25" points="37.315,58.132 37.315,489.400 40.209,492.295 40.209,55.237 " />
+<polygon stroke="black" stroke-width="1" fill="rgb(204, 204, 204)" fill-opacity="0.25" points="2.894,58.132 37.315,58.132 40.209,55.237 0.000,55.237 " />
+<polygon stroke="black" stroke-width="1" fill="rgb(204, 204, 204)" fill-opacity="0.25" points="74.630,61.026 40.209,61.026 40.209,492.295 74.630,492.295 " />
+<polygon stroke="black" stroke-width="1" fill="rgb(204, 204, 204)" fill-opacity="0.25" points="119.030,492.295 119.030,61.026 113.965,61.026 113.965,492.295 " />
+<polygon stroke="black" stroke-width="1" fill="rgb(204, 204, 204)" fill-opacity="0.25" points="178.366,457.874 178.366,492.295 183.431,492.295 183.431,457.874 " />
+<polygon stroke="black" stroke-width="1" fill="rgb(204, 204, 204)" fill-opacity="0.25" points="178.366,492.295 178.366,457.874 173.301,457.874 173.301,492.295 " />
+<polygon stroke="black" stroke-width="1" fill="rgb(204, 204, 204)" fill-opacity="0.25" points="203.099,492.295 203.099,485.739 196.543,485.739 196.543,492.295 " />
+<polygon stroke="black" stroke-width="1" fill="rgb(204, 204, 204)" fill-opacity="0.25" points="189.987,492.295 189.987,485.739 183.431,485.739 183.431,492.295 " />
+<polygon stroke="black" stroke-width="1" fill="rgb(204, 204, 204)" fill-opacity="0.25" points="87.742,492.295 94.297,492.295 94.297,55.237 87.742,55.237 " />
+<polygon stroke="black" stroke-width="1" fill="rgb(204, 204, 204)" fill-opacity="0.25" points="81.186,55.237 81.186,492.295 87.742,492.295 87.742,55.237 " />
+<polygon stroke="black" stroke-width="1" fill="rgb(204, 204, 204)" fill-opacity="0.25" points="74.630,55.237 74.630,492.295 81.186,492.295 81.186,55.237 " />
+<polygon stroke="black" stroke-width="1" fill="rgb(204, 204, 204)" fill-opacity="0.25" points="196.543,492.295 196.543,485.739 189.987,485.739 189.987,492.295 " />
+<polygon stroke="black" stroke-width="1" fill="rgb(204, 204, 204)" fill-opacity="0.25" points="100.853,492.295 107.409,492.295 107.409,55.237 100.853,55.237 " />
+<polygon stroke="black" stroke-width="1" fill="rgb(204, 204, 204)" fill-opacity="0.25" points="209.655,492.295 209.655,485.739 203.099,485.739 203.099,492.295 " />
+<polygon stroke="black" stroke-width="1" fill="rgb(204, 204, 204)" fill-opacity="0.25" points="94.297,55.237 94.297,492.295 100.853,492.295 100.853,55.237 " />
+<polygon stroke="black" stroke-width="1" fill="rgb(204, 204, 204)" fill-opacity="0.25" points="107.409,55.237 107.409,492.295 113.965,492.295 113.965,55.237 " />
+
+</svg>

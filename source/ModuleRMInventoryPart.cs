@@ -38,6 +38,11 @@ namespace RackMount
 
         public override void OnLoad(ConfigNode node)
         {
+            //disable existing ModuleCommand
+            PartModule p = part.Modules.GetModule<ModuleCommand>();
+            if (p != null)
+                p.enabled = false;
+
             //checks for no volume set
             if (autoCalculateVolume && packedVolumeLimit == 0)
             {
@@ -114,7 +119,7 @@ namespace RackMount
             List<uint> currentParts = new List<uint>();
             Dictionary<uint, int> buttonsToRemove = new Dictionary<uint, int>();
 
-        
+
             //looks for new parts
             for (int i = 0; i < storedParts.Count; i++)
             {
@@ -212,7 +217,7 @@ namespace RackMount
                 else if (!unMountableParts.ContainsKey(storedPart.snapshot.persistentId))
                 {
                     unMountableParts.Add(storedPart.snapshot.persistentId, storedPart.slotIndex);
-                    if(partType == "")
+                    if (partType == "")
                         ScreenMessages.PostScreenMessage("<color=orange>Part " + storedPart.snapshot.partInfo.title + " can only be mounted on part type of " +
                             moduleRackMount.GetValue("requiresPartType") + "!</color>\nIt is currently stored in part without a part type.", 7);
                     else
@@ -256,7 +261,7 @@ namespace RackMount
                     PartModule partModule = part.AddModule(moduleConfigNode, true);
                     int moduleIndex = part.Modules.IndexOf(partModule);
 
-                  
+
                     ProtoPartModuleSnapshot moduleSnapshot = storedPart.snapshot.FindModule(partModule, moduleIndex);
                     part.LoadModule(moduleSnapshot.moduleValues, ref moduleIndex);
 
