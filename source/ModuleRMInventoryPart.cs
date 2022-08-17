@@ -15,6 +15,15 @@ namespace RackMount
         public bool requiresEngineer = true;
 
         [KSPField]
+        public bool canAlwaysRackmount = false;
+
+        //removes existing ModuleCommand.  ModuleCommand is a special snowflake and needs additional logic to mount properly
+        //this starts with having an existing ModuleCommand then removing it.  This fixes issues with launch checks and on rails issues.
+        //disable if you don't plan on mounting ModuleCommand
+        [KSPField]
+        public bool removeModuleCommand = true;
+
+        [KSPField]
         public bool autoCalculateVolume = true;
 
         [KSPField]
@@ -29,20 +38,15 @@ namespace RackMount
         private BasePAWGroup rackmountGroup = new BasePAWGroup("rackmountGroup", "Rackmount Inventory", false);
 
         private bool onLoad;
-        private bool previousCrewPresent = true;
+        private bool previousCanRackmount = true;
 
-        //needed to turn on vessel renaming when a command part is installed.
+        //needed to turn on vessel renaming when a ModuleCommand part is installed.
         //For some reason putting it in OnUpdate() allows it to be displayed
         //on load.
         private bool displayVesselNaming = false;
 
         public override void OnLoad(ConfigNode node)
         {
-            //disable existing ModuleCommand
-            PartModule p = part.Modules.GetModule<ModuleCommand>();
-            if (p != null)
-                p.enabled = false;
-
             //checks for no volume set
             if (autoCalculateVolume && packedVolumeLimit == 0)
             {
@@ -53,19 +57,28 @@ namespace RackMount
                 }
                 float vol = ((float)Math.Round(bounds.size.x * bounds.size.y * bounds.size.z * volumeAdjustPercent, 2));
                 packedVolumeLimit = vol * 1000f;
-                autoCalculateVolume = false;
             }
 
             base.OnLoad(node);
 
-            //Buttons need to be added after base.OnLoad();
+            //disable existing ModuleCommand
+            if (removeModuleCommand)
+            {
+                PartModule p = part.Modules.GetModule<ModuleCommand>();
+                if (p != null)
+                    part.RemoveModule(p);
+            }
+
+            //modules need to be added after base.OnLoad();
             onLoad = true;
             if (storedParts != null)
             {
+                //add buttons
                 for (int i = 0; i < storedParts.Count; i++)
                 {
-                    AddRackmountButtons(storedParts.At(i));
+                    AddRackmountButton(storedParts.At(i));
                 }
+                //add mounted modules
                 for (int i = 0; i < storedParts.Count; i++)
                 {
                     bool mounted = false;
@@ -83,6 +96,8 @@ namespace RackMount
 
             Fields["InventorySlots"].group = rackmountGroup;
             Fields["InventorySlots"].guiName = null;
+            if(HighLogic.LoadedSceneIsFlight)
+                Fields["InventorySlots"].group.startCollapsed = true;
         }
 
         public override void OnUpdate()
@@ -90,7 +105,7 @@ namespace RackMount
             if (HighLogic.LoadedSceneIsFlight)
             {
                 //fugly way to display Vessel Renaming when ModuleCommand is
-                //mounted OnLoad.
+                //mounted OnLoad 
                 if (displayVesselNaming)
                 {
                     part.Events["SetVesselNaming"].guiActive = true;
@@ -98,17 +113,17 @@ namespace RackMount
                 }
 
                 //show or hide rackmount buttons
-                if (!previousCrewPresent && CrewPresent())
+                if (!previousCanRackmount && CanRackmount())
                 {
                     foreach (var button in Events.FindAll(x => x.name.Contains("RackmountButton")))
                         button.active = true;
-                    previousCrewPresent = true;
+                    previousCanRackmount = true;
                 }
-                else if (!CrewPresent() && previousCrewPresent)
+                else if (previousCanRackmount && !CanRackmount())
                 {
                     foreach (var button in Events.FindAll(x => x.name.Contains("RackmountButton")))
                         button.active = false;
-                    previousCrewPresent = false;
+                    previousCanRackmount = false;
                 }
             }
             base.OnUpdate();
@@ -124,7 +139,7 @@ namespace RackMount
             for (int i = 0; i < storedParts.Count; i++)
             {
                 if (!rackMountableParts.ContainsKey(storedParts.At(i).snapshot.persistentId) && !unMountableParts.ContainsKey(storedParts.At(i).snapshot.persistentId))
-                    AddRackmountButtons(storedParts.At(i));
+                    AddRackmountButton(storedParts.At(i));
                 currentParts.Add(storedParts.At(i).snapshot.persistentId);
             }
 
@@ -136,7 +151,7 @@ namespace RackMount
             }
             foreach (KeyValuePair<uint, int> button in buttonsToRemove)
             {
-                RemoveRackmountButtons(button.Key, button.Value);
+                RemoveRackmountButton(button.Key, button.Value);
             }
 
             //locks mounted parts.  Done in Update() because doing an EVA and going into Engineering mode re-enables the slotButton.
@@ -170,19 +185,15 @@ namespace RackMount
 
             //fugly way to display Vessel Renaming when ModuleCommand is
             //mounted OnLoad in the Editor
-            if (HighLogic.LoadedSceneIsEditor)
+            if (HighLogic.LoadedSceneIsEditor && displayVesselNaming)
             {
-                if (displayVesselNaming)
-                {
-                    part.Events["SetVesselNaming"].guiActiveEditor = true;
-                    displayVesselNaming = false;
-                }
+                part.Events["SetVesselNaming"].guiActiveEditor = true;
+                displayVesselNaming = false;
             }
-
         }
 
         //adds button for mounting and unmounting parts
-        private void AddRackmountButtons(StoredPart storedPart)
+        private void AddRackmountButton(StoredPart storedPart)
         {
             ConfigNode partConfig = storedPart.snapshot.partInfo.partConfig;
             ConfigNode moduleRackMount = partConfig.GetNode("MODULE", "name", "ModuleRackMount");
@@ -192,13 +203,14 @@ namespace RackMount
             if (moduleRackMount != null)
             {
                 moduleRackMount.TryGetValue("requiresPartType", ref requiresPartType);
-                if (requiresPartType == "" || requiresPartType.ToUpper() == partType.ToUpper())
+                if (requiresPartType == "" || partType.ToUpper() == "ANY" || requiresPartType.ToUpper() == partType.ToUpper())
                 {
                     rackMountableParts.Add(storedPart.snapshot.persistentId, storedPart.slotIndex);
 
                     KSPEvent mount = new KSPEvent
                     {
                         name = "RackmountButton" + storedPart.slotIndex,
+                        active = previousCanRackmount,
                         guiActive = true,
                         guiActiveEditor = true,
                         guiActiveUnfocused = true,
@@ -227,7 +239,7 @@ namespace RackMount
             }
         }
 
-        private void RemoveRackmountButtons(uint id, int slot)
+        private void RemoveRackmountButton(uint id, int slot)
         {
             Events.Find(x => x.name == "RackmountButton" + slot).active = false;
             Events.Remove(Events.Find(x => x.name == "RackmountButton" + slot));
@@ -261,23 +273,24 @@ namespace RackMount
                     PartModule partModule = part.AddModule(moduleConfigNode, true);
                     int moduleIndex = part.Modules.IndexOf(partModule);
 
-
                     ProtoPartModuleSnapshot moduleSnapshot = storedPart.snapshot.FindModule(partModule, moduleIndex);
                     part.LoadModule(moduleSnapshot.moduleValues, ref moduleIndex);
 
                     //ModuleCommand fixes
                     if (partModule.GetType() == typeof(ModuleCommand))
                     {
+
                         part.Events["SetVesselNaming"].guiActive = true;
                         part.Events["SetVesselNaming"].guiActiveEditor = true;
                         //Here so it display the Vessel Naming from OnLoad using Update
                         displayVesselNaming = true;
-
                         ModuleCommand c = (ModuleCommand)partModule;
                         DictionaryValueList<string, ControlPoint> controlPoints = new DictionaryValueList<string, ControlPoint>();
 
                         ControlPoint _default = new ControlPoint("_default", c.defaultControlPointDisplayName, part.transform, new Vector3(0, 0, 0));
                         controlPoints.Add(_default.name, _default);
+                        Debug.Log("[RM] c");
+
                         foreach (var node in moduleConfigNode.GetNodes("CONTROLPOINT"))
                         {
                             Vector3 orientation = new Vector3(0, 0, 0);
@@ -315,7 +328,6 @@ namespace RackMount
             BaseEvent button = (BaseEvent)Events.Find(x => x.name == "RackmountButton" + storedPart.slotIndex);
             button.guiName = "<b><color=red>Unmount</color> " + storedPart.snapshot.partInfo.title + "</b>";
 
-
             //magic?!  It works, don't know why
             part.ModulesOnActivate();
             part.ModulesOnStart();
@@ -325,7 +337,6 @@ namespace RackMount
             if (paw != null)
                 paw.UpdateWindow();
         }
-
 
         private void UnmountPart(StoredPart storedPart)
         {
@@ -346,6 +357,7 @@ namespace RackMount
                             module.moduleValues = partModule.snapshot.moduleValues;
                         removeModules.Add(partModule);
                         module.moduleValues.RemoveValue("modulePersistentId");
+                        
                         if (module.GetType() == typeof(ModuleCommand))
                         {
                             part.Events["SetVesselNaming"].guiActive = false;
@@ -389,8 +401,12 @@ namespace RackMount
             part.ModulesOnDeactivate();
         }
 
-        private bool CrewPresent()
+        private bool CanRackmount()
         {
+            //for debugging
+            if (canAlwaysRackmount)
+                return true;
+
             //First check for kerbal on EVA.  If EVA doesn't qualify, return false.
             if (FlightGlobals.ActiveVessel.isEVA)
             {
