@@ -96,7 +96,7 @@ namespace RackMount
 
             Fields["InventorySlots"].group = rackmountGroup;
             Fields["InventorySlots"].guiName = null;
-            if(HighLogic.LoadedSceneIsFlight)
+            if (HighLogic.LoadedSceneIsFlight)
                 Fields["InventorySlots"].group.startCollapsed = true;
         }
 
@@ -165,6 +165,7 @@ namespace RackMount
                     if (mounted)
                     {
                         inventoryUI.slotButton[storedParts.At(i).slotIndex].enabled = false;
+                        inventoryUI.slotButton[storedParts.At(i).slotIndex].gameObject.SetActive(false);
                     }
                 }
             }
@@ -357,7 +358,7 @@ namespace RackMount
                             module.moduleValues = partModule.snapshot.moduleValues;
                         removeModules.Add(partModule);
                         module.moduleValues.RemoveValue("modulePersistentId");
-                        
+
                         if (module.GetType() == typeof(ModuleCommand))
                         {
                             part.Events["SetVesselNaming"].guiActive = false;
@@ -390,6 +391,7 @@ namespace RackMount
             //unlocking always happens from paw?
             UIPartActionInventory inventoryUI = (UIPartActionInventory)part.PartActionWindow.ListItems.Find(x => x.GetType() == typeof(UIPartActionInventory));
             inventoryUI.slotButton[storedPart.slotIndex].enabled = true;
+            inventoryUI.slotButton[storedPart.slotIndex].gameObject.SetActive(true);
 
             BaseEvent button = (BaseEvent)Events.Find(x => x.name == "RackmountButton" + storedPart.slotIndex);
             button.guiName = "<b><color=green>Rackmount</color> " + storedPart.snapshot.partInfo.title + "</b>";
