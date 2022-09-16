@@ -6,7 +6,7 @@ using UnityEngine.EventSystems;
 
 namespace RackMount
 {
-    public class ModuleRackMount : PartModule
+    public class ModuleRackMountPart : PartModule
     {
         [KSPField]
         public bool partRackmountable = true;

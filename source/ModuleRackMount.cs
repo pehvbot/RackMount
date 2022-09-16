@@ -6,7 +6,7 @@ using UnityEngine.EventSystems;
 
 namespace RackMount
 {
-    public class ModuleRMInventoryPart : ModuleInventoryPart
+    public class ModuleRackMount : PartModule
     {
         [KSPField]
         public float evaDistance = 3;
@@ -19,9 +19,9 @@ namespace RackMount
 
         //removes existing ModuleCommand.  ModuleCommand is a special snowflake and needs additional logic to mount properly
         //this starts with having an existing ModuleCommand then removing it.  This fixes issues with launch checks and on rails issues.
-        //disable if you don't plan on mounting ModuleCommand
+        //enable if you plan on mounting ModuleCommand
         [KSPField]
-        public bool removeModuleCommand = true;
+        public bool removeModuleCommand = false;
 
         [KSPField]
         public bool autoCalculateVolume = true;
@@ -35,6 +35,8 @@ namespace RackMount
         Dictionary<uint, int> rackMountableParts = new Dictionary<uint, int>();
         Dictionary<uint, int> unMountableParts = new Dictionary<uint, int>();
 
+        private ModuleInventoryPart inv;
+
         private BasePAWGroup rackmountGroup = new BasePAWGroup("rackmountGroup", "Rackmount Inventory", false);
 
         private bool onLoad;
@@ -47,8 +49,10 @@ namespace RackMount
 
         public override void OnLoad(ConfigNode node)
         {
+            inv = part.Modules.GetModule<ModuleInventoryPart>();
+
             //checks for no volume set
-            if (autoCalculateVolume && packedVolumeLimit == 0)
+            if (autoCalculateVolume && inv.packedVolumeLimit == 0)
             {
                 Bounds bounds = default(Bounds);
                 foreach (var bound in part.GetRendererBounds())
@@ -56,7 +60,7 @@ namespace RackMount
                     bounds.Encapsulate(bound);
                 }
                 float vol = ((float)Math.Round(bounds.size.x * bounds.size.y * bounds.size.z * volumeAdjustPercent, 2));
-                packedVolumeLimit = vol * 1000f;
+                inv.packedVolumeLimit = vol * 1000f;
             }
 
             base.OnLoad(node);
@@ -71,33 +75,38 @@ namespace RackMount
 
             //modules need to be added after base.OnLoad();
             onLoad = true;
-            if (storedParts != null)
+            if (inv.storedParts != null)
             {
                 //add buttons
-                for (int i = 0; i < storedParts.Count; i++)
+                for (int i = 0; i < inv.storedParts.Count; i++)
                 {
-                    AddRackmountButton(storedParts.At(i));
+                    AddRackmountButton(inv.storedParts.At(i));
                 }
                 //add mounted modules
-                for (int i = 0; i < storedParts.Count; i++)
+                for (int i = 0; i < inv.storedParts.Count; i++)
                 {
                     bool mounted = false;
-                    storedParts.At(i).snapshot.partData.TryGetValue("partRackmounted", ref mounted);
+                    inv.storedParts.At(i).snapshot.partData.TryGetValue("partRackmounted", ref mounted);
                     if (mounted)
-                        RackmountPart(storedParts.At(i));
+                        RackmountPart(inv.storedParts.At(i));
                 }
             }
-            onLoad = false;
         }
 
         public override void OnStart(StartState state)
         {
+            if(inv == null)
+                inv = part.Modules.GetModule<ModuleInventoryPart>();
+
             base.OnStart(state);
 
-            Fields["InventorySlots"].group = rackmountGroup;
-            Fields["InventorySlots"].guiName = null;
+            inv.Fields["InventorySlots"].group = rackmountGroup;
+            inv.Fields["InventorySlots"].guiName = null;
             if (HighLogic.LoadedSceneIsFlight)
-                Fields["InventorySlots"].group.startCollapsed = true;
+                inv.Fields["InventorySlots"].group.startCollapsed = true;
+
+            onLoad = false;
+
         }
 
         public override void OnUpdate()
@@ -136,11 +145,11 @@ namespace RackMount
 
 
             //looks for new parts
-            for (int i = 0; i < storedParts.Count; i++)
+            for (int i = 0; i < inv.storedParts.Count; i++)
             {
-                if (!rackMountableParts.ContainsKey(storedParts.At(i).snapshot.persistentId) && !unMountableParts.ContainsKey(storedParts.At(i).snapshot.persistentId))
-                    AddRackmountButton(storedParts.At(i));
-                currentParts.Add(storedParts.At(i).snapshot.persistentId);
+                if (!rackMountableParts.ContainsKey(inv.storedParts.At(i).snapshot.persistentId) && !unMountableParts.ContainsKey(inv.storedParts.At(i).snapshot.persistentId))
+                    AddRackmountButton(inv.storedParts.At(i));
+                currentParts.Add(inv.storedParts.At(i).snapshot.persistentId);
             }
 
             //looks for removed parts
@@ -158,29 +167,35 @@ namespace RackMount
             if (part.PartActionWindow != null)
             {
                 UIPartActionInventory inventoryUI = (UIPartActionInventory)part.PartActionWindow.ListItems.Find(x => x.GetType() == typeof(UIPartActionInventory));
-                for (int i = 0; i < storedParts.Count; i++)
+                for (int i = 0; i < inv.storedParts.Count; i++)
                 {
                     bool mounted = false;
-                    storedParts.At(i).snapshot.partData.TryGetValue("partRackmounted", ref mounted);
+                    inv.storedParts.At(i).snapshot.partData.TryGetValue("partRackmounted", ref mounted);
                     if (mounted)
                     {
-                        inventoryUI.slotButton[storedParts.At(i).slotIndex].enabled = false;
-                        inventoryUI.slotButton[storedParts.At(i).slotIndex].gameObject.SetActive(false);
+                        inventoryUI.slotButton[inv.storedParts.At(i).slotIndex].enabled = false;
+                        inventoryUI.slotButton[inv.storedParts.At(i).slotIndex].gameObject.SetActive(false);
                     }
                 }
             }
             //checks for construction mode and locks/unlocks mounted items
-            UIPartActionInventory constructionUI = constructorModeInventory;
+            UIPartActionInventory constructionUI = inv.constructorModeInventory;
             if (constructionUI != null)
             {
-                for (int i = 0; i < storedParts.Count; i++)
+                for (int i = 0; i < inv.storedParts.Count; i++)
                 {
                     bool mounted = false;
-                    storedParts.At(i).snapshot.partData.TryGetValue("partRackmounted", ref mounted);
+                    inv.storedParts.At(i).snapshot.partData.TryGetValue("partRackmounted", ref mounted);
                     if (mounted)
-                        constructionUI.slotButton[storedParts.At(i).slotIndex].enabled = false;
+                    {
+                        constructionUI.slotButton[inv.storedParts.At(i).slotIndex].enabled = false;
+                        constructionUI.slotButton[inv.storedParts.At(i).slotIndex].gameObject.SetActive(false);
+                    }
                     else
-                        constructionUI.slotButton[storedParts.At(i).slotIndex].enabled = true;
+                    {
+                        constructionUI.slotButton[inv.storedParts.At(i).slotIndex].enabled = true;
+                        constructionUI.slotButton[inv.storedParts.At(i).slotIndex].gameObject.SetActive(true);
+                    }
                 }
             }
 
@@ -197,13 +212,13 @@ namespace RackMount
         private void AddRackmountButton(StoredPart storedPart)
         {
             ConfigNode partConfig = storedPart.snapshot.partInfo.partConfig;
-            ConfigNode moduleRackMount = partConfig.GetNode("MODULE", "name", "ModuleRackMount");
+            ConfigNode rackMountPart = partConfig.GetNode("MODULE", "name", "ModuleRackMountPart");
 
             string requiresPartType = "";
 
-            if (moduleRackMount != null)
+            if (rackMountPart != null)
             {
-                moduleRackMount.TryGetValue("requiresPartType", ref requiresPartType);
+                rackMountPart.TryGetValue("requiresPartType", ref requiresPartType);
                 if (requiresPartType == "" || partType.ToUpper() == "ANY" || requiresPartType.ToUpper() == partType.ToUpper())
                 {
                     rackMountableParts.Add(storedPart.snapshot.persistentId, storedPart.slotIndex);
@@ -222,20 +237,16 @@ namespace RackMount
                     BaseEvent RackmountButton = new BaseEvent(Events, mount.name, () => RackmountButtonPressed(storedPart), mount);
                     RackmountButton.group = rackmountGroup;
                     Events.Add(RackmountButton);
-
-                    UIPartActionWindow paw = part.PartActionWindow;
-                    if (paw != null)
-                        paw.UpdateWindow();
                 }
                 else if (!unMountableParts.ContainsKey(storedPart.snapshot.persistentId))
                 {
                     unMountableParts.Add(storedPart.snapshot.persistentId, storedPart.slotIndex);
                     if (partType == "")
                         ScreenMessages.PostScreenMessage("<color=orange>Part " + storedPart.snapshot.partInfo.title + " can only be mounted on part type of " +
-                            moduleRackMount.GetValue("requiresPartType") + "!</color>\nIt is currently stored in part without a part type.", 7);
+                            rackMountPart.GetValue("requiresPartType") + "!</color>\nIt is currently stored in part without a part type.", 7);
                     else
                         ScreenMessages.PostScreenMessage("<color=orange>Part " + storedPart.snapshot.partInfo.title + " can only be mounted on part type of " +
-                            moduleRackMount.GetValue("requiresPartType") + "!</color>\nIt is currently stored in a part type of " + partType + ".", 7);
+                            rackMountPart.GetValue("requiresPartType") + "!</color>\nIt is currently stored in a part type of " + partType + ".", 7);
                 }
             }
         }
@@ -246,10 +257,6 @@ namespace RackMount
             Events.Remove(Events.Find(x => x.name == "RackmountButton" + slot));
 
             rackMountableParts.Remove(id);
-
-            UIPartActionWindow paw = part.PartActionWindow;
-            if (paw != null)
-                paw.UpdateWindow();
         }
 
         private void RackmountButtonPressed(StoredPart storedPart)
@@ -271,6 +278,12 @@ namespace RackMount
             {
                 if (moduleConfigNode.TryGetValue("rackMountable", ref rackMountable))
                 {
+                    //ModuleScienceExperiment fixes
+                    if (moduleConfigNode.GetValue("name") == "ModuleScienceExperiment")
+                    {
+                        moduleConfigNode.RemoveValue("FxModules");
+                    }
+
                     PartModule partModule = part.AddModule(moduleConfigNode, true);
                     int moduleIndex = part.Modules.IndexOf(partModule);
 
@@ -327,16 +340,12 @@ namespace RackMount
             storedPart.snapshot.partData.SetValue("partRackmounted", true, true);
 
             BaseEvent button = (BaseEvent)Events.Find(x => x.name == "RackmountButton" + storedPart.slotIndex);
-            button.guiName = "<b><color=red>Unmount</color> " + storedPart.snapshot.partInfo.title + "</b>";
+            button.guiName = "<b><color=orange>Unmount</color> " + storedPart.snapshot.partInfo.title + "</b>";
 
             //magic?!  It works, don't know why
             part.ModulesOnActivate();
             part.ModulesOnStart();
             part.ModulesOnStartFinished();
-
-            UIPartActionWindow paw = part.PartActionWindow;
-            if (paw != null)
-                paw.UpdateWindow();
         }
 
         private void UnmountPart(StoredPart storedPart)
@@ -395,10 +404,6 @@ namespace RackMount
 
             BaseEvent button = (BaseEvent)Events.Find(x => x.name == "RackmountButton" + storedPart.slotIndex);
             button.guiName = "<b><color=green>Rackmount</color> " + storedPart.snapshot.partInfo.title + "</b>";
-
-            UIPartActionWindow paw = part.PartActionWindow;
-            if (paw != null)
-                paw.UpdateWindow();
 
             part.ModulesOnDeactivate();
         }
