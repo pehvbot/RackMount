@@ -91,6 +91,7 @@ namespace RackMount
                         RackmountPart(inv.storedParts.At(i));
                 }
             }
+            onLoad = false;
         }
 
         public override void OnStart(StartState state)
@@ -104,9 +105,6 @@ namespace RackMount
             inv.Fields["InventorySlots"].guiName = null;
             if (HighLogic.LoadedSceneIsFlight)
                 inv.Fields["InventorySlots"].group.startCollapsed = true;
-
-            onLoad = false;
-
         }
 
         public override void OnUpdate()
@@ -303,7 +301,6 @@ namespace RackMount
 
                         ControlPoint _default = new ControlPoint("_default", c.defaultControlPointDisplayName, part.transform, new Vector3(0, 0, 0));
                         controlPoints.Add(_default.name, _default);
-                        Debug.Log("[RM] c");
 
                         foreach (var node in moduleConfigNode.GetNodes("CONTROLPOINT"))
                         {
@@ -318,7 +315,6 @@ namespace RackMount
                     //Modules loaded with OnLoad() already includes modulePersistentID from save file
                     if (!onLoad)
                         moduleSnapshot.moduleValues.AddValue("modulePersistentId", partModule.GetPersistentId());
-
                 }
             }
 
@@ -336,16 +332,18 @@ namespace RackMount
                 else if (rackMountable)
                     resource.Load(part);
             }
-
             storedPart.snapshot.partData.SetValue("partRackmounted", true, true);
 
             BaseEvent button = (BaseEvent)Events.Find(x => x.name == "RackmountButton" + storedPart.slotIndex);
             button.guiName = "<b><color=orange>Unmount</color> " + storedPart.snapshot.partInfo.title + "</b>";
 
-            //magic?!  It works, don't know why
-            part.ModulesOnActivate();
-            part.ModulesOnStart();
-            part.ModulesOnStartFinished();
+            //creates a potential bug when existing mods are 'restarted' since it restarts ALL existing modules.
+            if (!onLoad)
+            {
+                part.ModulesOnActivate();
+                part.ModulesOnStart();
+                part.ModulesOnStartFinished();
+            }
         }
 
         private void UnmountPart(StoredPart storedPart)
