@@ -24,6 +24,9 @@ namespace RackMount
         public bool removeModuleCommand = false;
 
         [KSPField]
+        public bool removeCrewCapacity = true;
+
+        [KSPField]
         public bool autoCalculateVolume = true;
 
         [KSPField]
@@ -40,7 +43,6 @@ namespace RackMount
         private BasePAWGroup rackmountGroup = new BasePAWGroup("rackmountGroup", "Rackmount Inventory", false);
 
         private bool onLoad;
-        private bool previousCanRackmount = true;
 
         //needed to turn on vessel renaming when a ModuleCommand part is installed.
         //For some reason putting it in OnUpdate() allows it to be displayed
@@ -71,6 +73,12 @@ namespace RackMount
                 PartModule p = part.Modules.GetModule<ModuleCommand>();
                 if (p != null)
                     part.RemoveModule(p);
+            }
+
+            //removes crew capacity if seats are enabled
+            if(removeCrewCapacity)
+            {
+               // part.CrewCapacity = 0;
             }
 
             //modules need to be added after base.OnLoad();
@@ -120,17 +128,15 @@ namespace RackMount
                 }
 
                 //show or hide rackmount buttons
-                if (!previousCanRackmount && CanRackmount())
+                if (CanRackmount())
                 {
                     foreach (var button in Events.FindAll(x => x.name.Contains("RackmountButton")))
                         button.active = true;
-                    previousCanRackmount = true;
                 }
-                else if (previousCanRackmount && !CanRackmount())
+                else
                 {
                     foreach (var button in Events.FindAll(x => x.name.Contains("RackmountButton")))
                         button.active = false;
-                    previousCanRackmount = false;
                 }
             }
             base.OnUpdate();
@@ -224,7 +230,7 @@ namespace RackMount
                     KSPEvent mount = new KSPEvent
                     {
                         name = "RackmountButton" + storedPart.slotIndex,
-                        active = previousCanRackmount,
+                        active = true,
                         guiActive = true,
                         guiActiveEditor = true,
                         guiActiveUnfocused = true,
@@ -267,6 +273,42 @@ namespace RackMount
                 RackmountPart(storedPart);
         }
 
+        //ModuleRackMountPart adjustments
+        //changes to the host part
+        private void RackMountAdjusters(ConfigNode moduleConfigNode)
+        {
+            //add crew seat
+            if (!onLoad && moduleConfigNode.HasValue("crewSeat"))
+            {
+                part.CrewCapacity += int.Parse(moduleConfigNode.GetValue("crewSeat"));
+
+                PartCrewManifest manifest = ShipConstruction.ShipManifest.GetPartCrewManifest(part.craftID);
+
+                if (manifest == null)
+                {
+                    ConfigNode node = new ConfigNode();
+                    node.AddValue("part", part.name + "_" + part.craftID);
+                    node.AddValue("CrewCapacity", part.CrewCapacity);
+                    ShipConstruction.ShipManifest.SetPartManifest(part.craftID, PartCrewManifest.FromConfigNode(node, ShipConstruction.ShipManifest));
+                    manifest = ShipConstruction.ShipManifest.GetPartCrewManifest(part.craftID);
+                }
+                var newCrew = new string[part.CrewCapacity];
+
+                for (int i = 0; i < newCrew.Length; i++)
+                {
+                    if (i < manifest.partCrew.Length)
+                        newCrew[i] = manifest.partCrew[i];
+                    else
+                        newCrew[i] = "";
+                }
+                manifest.partCrew = newCrew;
+                manifest.PartInfo.partPrefab.CrewCapacity = part.CrewCapacity;
+                manifest.PartInfo.partConfig.SetValue("CrewCapacity", part.CrewCapacity);
+                Debug.Log("[RM] part:" + part.CrewCapacity + " manifest:" + manifest.partCrew.Length);
+            }
+        }
+
+        //checks all stored parts for rackmountable modules as well as adjusters to the part
         private void RackmountPart(StoredPart storedPart)
         {
             bool rackMountable = true;
@@ -274,6 +316,11 @@ namespace RackMount
 
             foreach (ConfigNode moduleConfigNode in partConfig.GetNodes("MODULE"))
             {
+                //ModuleRackMountPart adjustments
+                if (moduleConfigNode.GetValue("name") == "ModuleRackMountPart")
+                    RackMountAdjusters(moduleConfigNode);
+
+                //mount modules
                 if (moduleConfigNode.TryGetValue("rackMountable", ref rackMountable))
                 {
                     //ModuleScienceExperiment fixes
@@ -346,8 +393,45 @@ namespace RackMount
             }
         }
 
+        private bool UnmountAdjusters(ConfigNode moduleConfigNode)
+        {
+            if (moduleConfigNode.HasValue("crewSeat"))
+            {
+                if (part.protoModuleCrew.Count > part.CrewCapacity - int.Parse(moduleConfigNode.GetValue("crewSeat")))
+                {
+                    ScreenMessages.PostScreenMessage($"<color=orange>The seat is still being used! </color> You cannot unmount this part, a kerbal is still sitting in it.", 7);
+                    return false;
+                }
+
+                part.CrewCapacity -= int.Parse(moduleConfigNode.GetValue("crewSeat"));
+
+                PartCrewManifest manifest = ShipConstruction.ShipManifest.GetPartCrewManifest(part.craftID);
+
+                var newCrew = new string[part.CrewCapacity];
+                for (int i = 0; i < newCrew.Length; i++)
+                    newCrew[i] = manifest.partCrew[i];
+                manifest.partCrew = newCrew;
+                manifest.PartInfo.partPrefab.CrewCapacity = part.CrewCapacity;
+                manifest.PartInfo.partConfig.SetValue("CrewCapacity", part.CrewCapacity);
+            }
+
+            return true;
+        }
+
+        //unmounting mounted modules and undo part adjusters
         private void UnmountPart(StoredPart storedPart)
         {
+            //undo ModuleRackMountPart adjustments
+            ConfigNode partConfig = storedPart.snapshot.partInfo.partConfig;
+            foreach (ConfigNode moduleConfigNode in partConfig.GetNodes("MODULE"))
+            {
+                //adjust crew capacity adjustments.
+                //return false aborts unmount.
+                if (moduleConfigNode.GetValue("name") == "ModuleRackMountPart")
+                    if (!UnmountAdjusters(moduleConfigNode))
+                        return;
+            }
+
             List<PartModule> removeModules = new List<PartModule>();
 
             //likely needs a better way of storing/retrieving moduleValues
@@ -412,21 +496,19 @@ namespace RackMount
             if (canAlwaysRackmount)
                 return true;
 
-            //First check for kerbal on EVA.  If EVA doesn't qualify, return false.
+            //Next check onboard crew
+            foreach (var crew in vessel.GetVesselCrew())
+                if (!requiresEngineer || crew.trait == "Engineer")
+                    return true;
+
+            //Finally check for kerbal on EVA.  
             if (FlightGlobals.ActiveVessel.isEVA)
             {
                 ProtoCrewMember crew = FlightGlobals.ActiveVessel.GetVesselCrew()[0];
                 float kerbalDistanceToPart = Vector3.Distance(FlightGlobals.ActiveVessel.transform.position, part.collider.ClosestPointOnBounds(FlightGlobals.ActiveVessel.transform.position));
                 if (kerbalDistanceToPart < evaDistance && (!requiresEngineer || crew.trait == "Engineer"))
                     return true;
-                else
-                    return false;
             }
-
-            //Next check onboard crew
-            foreach (var crew in vessel.GetVesselCrew())
-                if (!requiresEngineer || crew.trait == "Engineer")
-                    return true;
 
             return false;
         }

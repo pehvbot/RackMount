@@ -17,6 +17,9 @@ namespace RackMount
         [KSPField]
         public string requiresPartType = "";
 
+        [KSPField]
+        public int crewSeat = 0;
+
         public override void OnLoad(ConfigNode node)
         {
             base.OnLoad(node);

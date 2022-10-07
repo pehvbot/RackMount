@@ -1,4 +1,5 @@
-﻿using System;
+﻿﻿using System;
+
 namespace RackMount
 {
     public class ModuleCargoPartRM : ModuleCargoPart
@@ -11,10 +12,10 @@ namespace RackMount
 
         bool firstRun = true;
 
-        [KSPEvent(active = true,guiActive = false, guiActiveEditor = true, advancedTweakable = true)]
+        [KSPEvent(active = true, guiActive = false, guiActiveEditor = true, advancedTweakable = true)]
         private void ToggleCargoPart()
         {
-            if(cargoActive)
+            if (cargoActive)
             {
                 packedVolume = -1;
                 Events["ToggleCargoPart"].guiName = "Enable as cargo";
@@ -33,11 +34,14 @@ namespace RackMount
         {
             if (firstRun)
             {
+                if (packedVolume == -1)
+                    Events["ToggleCargoPart"].active = false;
+
                 savedPackedVolume = packedVolume;
                 firstRun = false;
             }
 
-            if(!cargoActive)
+            if (!cargoActive)
             {
                 packedVolume = -1;
                 Events["ToggleCargoPart"].guiName = "Enable as cargo";
@@ -57,9 +61,11 @@ namespace RackMount
                 {
                     cost += inventory.storedParts.At(i).snapshot.partInfo.cost;
                 }
+
                 string p = "part";
                 if (inventory.storedParts.Count > 1)
                     p = "parts";
+
                 ScreenMessages.PostScreenMessage($"<color=orange>WARNING:</color> This {part.partInfo.title} has {inventory.storedParts.Count} {p} in it's inventory worth {cost:n0}.  You will lose those funds if you recover this vessel with this part still stored on this vessel", 7);
 
             }
@@ -67,4 +73,3 @@ namespace RackMount
         }
     }
 }
-
