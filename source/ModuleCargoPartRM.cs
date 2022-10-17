@@ -66,7 +66,7 @@ namespace RackMount
                 if (inventory.storedParts.Count > 1)
                     p = "parts";
 
-                ScreenMessages.PostScreenMessage($"<color=orange>WARNING:</color> This {part.partInfo.title} has {inventory.storedParts.Count} {p} in it's inventory worth {cost:n0}.  You will lose those funds if you recover this vessel with this part still stored on this vessel", 7);
+                ScreenMessages.PostScreenMessage($"<color=orange>WARNING:</color> This {part.partInfo.title} has {inventory.storedParts.Count} {p} items in it's inventory worth {cost:n0}.  You will lose those funds if you recover this vessel with this part still stored on this vessel", 7);
 
             }
             base.OnStoredInInventory(moduleInventoryPart);

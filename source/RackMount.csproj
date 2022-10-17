@@ -74,7 +74,7 @@
     <Compile Include="ModuleRackMount.cs" />
     <Compile Include="ModuleRackMountPart.cs" />
     <Compile Include="ModuleCargoPartRM.cs" />
-    <Compile Include="EditorBehavior.cs" />
+    <Compile Include="RackMountSettings.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
 </Project>

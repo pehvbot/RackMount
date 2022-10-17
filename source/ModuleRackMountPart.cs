@@ -27,10 +27,9 @@ namespace RackMount
 
             if (autoCalculateVolume && cargo != null)
             {
-                Bounds bounds = default(Bounds);
-
                 if (cargo.packedVolume == 0)
                 {
+                    Bounds bounds = default(Bounds);
                     foreach (var bound in part.GetRendererBounds())
                         bounds.Encapsulate(bound);
                     float vol = ((float)Math.Round(bounds.size.x * bounds.size.y * bounds.size.z, 2));
