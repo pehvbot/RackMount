@@ -11,7 +11,7 @@
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
-    <DebugType>full</DebugType>
+    <DebugType>portable</DebugType>
     <Optimize>false</Optimize>
     <OutputPath>bin\Debug</OutputPath>
     <DefineConstants>DEBUG;</DefineConstants>
@@ -68,6 +68,15 @@
     <Reference Include="UnityEngine.InputModule">
       <HintPath>..\dlls_1_12_2\UnityEngine.InputModule.dll</HintPath>
     </Reference>
+    <Reference Include="0Harmony">
+      <HintPath>..\..\..\..\Downloads\KSPCommunityFixes-master\KSPCommunityFixes\lib\0Harmony.dll</HintPath>
+    </Reference>
+    <Reference Include="HarmonyInstallChecker">
+      <HintPath>..\..\KSP RackMount\GameData\000_Harmony\HarmonyInstallChecker.dll</HintPath>
+    </Reference>
+    <Reference Include="RackMountKerbalism">
+      <HintPath>RackMountKerbalism\bin\Debug\RackMountKerbalism.dll</HintPath>
+    </Reference>
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Properties\AssemblyInfo.cs" />
@@ -75,6 +84,11 @@
     <Compile Include="ModuleRackMountPart.cs" />
     <Compile Include="ModuleCargoPartRM.cs" />
     <Compile Include="RackMountSettings.cs" />
+    <Compile Include="Utilities.cs" />
+    <Compile Include="AddPart.cs" />
+    <Compile Include="GameLoadPatchs.cs" />
+    <Compile Include="ModuleCommandProbe.cs" />
+    <Compile Include="RackmountedControlSources.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
 </Project>

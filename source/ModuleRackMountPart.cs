@@ -1,8 +1,4 @@
 ﻿using UnityEngine;
-using System.Collections.Generic;
-using System;
-using System.Reflection;
-using UnityEngine.EventSystems;
 
 namespace RackMount
 {
@@ -23,17 +19,14 @@ namespace RackMount
         public override void OnLoad(ConfigNode node)
         {
             base.OnLoad(node);
-            ModuleCargoPart cargo = (ModuleCargoPart)part.Modules.GetModule("ModuleCargoPart");
+
+            ModuleCargoPart cargo = (ModuleCargoPart)part.Modules.GetModule<ModuleCargoPart>();
 
             if (autoCalculateVolume && cargo != null)
             {
                 if (cargo.packedVolume == 0)
                 {
-                    Bounds bounds = default(Bounds);
-                    foreach (var bound in part.GetRendererBounds())
-                        bounds.Encapsulate(bound);
-                    float vol = ((float)Math.Round(bounds.size.x * bounds.size.y * bounds.size.z, 2));
-                    cargo.packedVolume = vol * 1000f;
+                    cargo.packedVolume = Utilities.CalculateVolume(part);
                     autoCalculateVolume = false;
                 }
             }

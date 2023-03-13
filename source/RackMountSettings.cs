@@ -3,6 +3,7 @@ namespace RackMount
 {
     public class RackMountSettings : GameParameters.CustomParameterNode
     {
+
         public RackMountSettings()
         {
         }
@@ -43,7 +44,7 @@ namespace RackMount
         [GameParameters.CustomParameterUI("Requires an Engineer to rackmount in flight.", toolTip = "You will need an engineer to rackmount and unmount parts.")]
         public bool requiresEngineer = true;
 
-        [GameParameters.CustomIntParameterUI("Maximum EVA distance",toolTip = "The maximum distance a kerbal can be from the host part.", minValue = 2, maxValue = 10)]
+        [GameParameters.CustomIntParameterUI("Maximum EVA distance",toolTip = "The maximum distance a kerbal can rackmount items from the host part.", minValue = 2, maxValue = 10)]
         public int evaDistance = 3;
 
 

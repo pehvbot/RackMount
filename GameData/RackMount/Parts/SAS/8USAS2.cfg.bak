@@ -1,0 +1,47 @@
+PART
+{
+  name = RM8USAS2
+  module = Part
+  author = pehvbot
+	MODEL
+  {
+    model = RackMount/Parts/SAS/8U3
+    scale = 1.0, 1.0, 1.0
+  }  
+  rescaleFactor = 1.0
+  CrewCapacity = 0
+  TechRequired = start
+  entryCost = 0
+  cost = 500
+  category = Pods
+  title = RM8USAS2
+  manufacturer = #autoLOC_501631
+  description = The Mk1 Telemetry Launch Control Unit is the latest in rackmountable unmanned command modules.  It uses the latest advances in 'vacuum tube' and 'acuator' technoloy to enable control and basic communications with unmanned parts.
+  mass = 0.03
+  dragModelType = default
+  maximum_drag = 0.2
+  minimum_drag = 0.2
+  angularDrag = 2
+  crashTolerance = 9
+  maxTemp = 2000 
+  explosionPotential = 0
+  breakingForce = 350
+  breakingTorque = 350
+  tags = rackmount command mk1
+ 
+  MODULE
+		{
+			name = ModuleSAS
+			standalone = true
+			rackMountable = true
+			SASServiceLevel = 2
+		}
+  MODULE
+	{
+		name = ModuleCargoPart
+	}
+	MODULE
+	{
+		name = ModuleRackMountPart
+	}
+}

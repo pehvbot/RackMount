@@ -1,4 +1,6 @@
-﻿﻿using System;
+﻿//extends ModuleCargoPart to bypass KSP removal.
+//manipulates packedVolume to toggle them as cargo parts
+//gives warning about losing cost for parts stored in a cargo part on recovery
 
 namespace RackMount
 {
@@ -29,7 +31,6 @@ namespace RackMount
             }
         }
 
-
         private void Start()
         {
             if (firstRun)
@@ -55,7 +56,7 @@ namespace RackMount
         {
             float cost = 0;
             ModuleInventoryPart inventory = part.Modules.GetModule<ModuleInventoryPart>();
-            if (inventory.storedParts.Count > 0)
+            if (inventory != null && inventory.storedParts.Count > 0)
             {
                 for (int i = 0; i < inventory.storedParts.Count; i++)
                 {
