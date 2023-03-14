@@ -450,14 +450,13 @@ namespace RackMount
 
                         var availablePartModule = availablePart.partPrefab.AddModule(moduleConfigNode, true);
 
-                        /*
                         //wake up Kerbalism Experiments
                         if (availablePartModule.moduleName == "Experiment")
                         {
                             availablePartModule.OnStart(StartState.None);
                             RackMountKerbalism.CompileModuleInfos(availablePartModule);
                         }
-                        */
+                        
                         availablePart.partPrefab.gameObject.SetActive(value: false);
                         availablePart.partConfig.AddNode(moduleConfigNode);
                     }
