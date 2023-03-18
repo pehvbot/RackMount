@@ -16,6 +16,9 @@ namespace RackMount
         [KSPField]
         public int crewSeat = 0;
 
+        [KSPField]
+        public bool hasAirlock;
+
         public override void OnLoad(ConfigNode node)
         {
             base.OnLoad(node);

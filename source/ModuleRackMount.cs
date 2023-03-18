@@ -14,6 +14,12 @@ namespace RackMount
         public float volumeAdjustPercent = 1.0f;
 
         [KSPField]
+        public bool autoCalculateEmptyMass = true;
+
+        [KSPField]
+        public float massSurfaceArea = 0.027f;
+
+        [KSPField]
         public string partType = "";
 
         [KSPField(isPersistant =true)]
@@ -40,6 +46,17 @@ namespace RackMount
         //keeps track to make sure ModuleInventoryPart is available
         private bool invLoaded = false;
 
+        //airlock configs
+        //base code taken from RP-1
+        //https://github.com/KSP-RO/RP-0
+        [KSPField(isPersistant =true)]
+        public bool enableAirlocks = false;
+        [KSPField(isPersistant = true)]
+        int partHasAirlock = 0;
+
+        protected List<Collider> airlocks = new List<Collider>();
+        protected Transform airlock = null;
+
         public override void OnLoad(ConfigNode node)
         {
             inv = part.Modules.GetModule<ModuleInventoryPart>();
@@ -49,14 +66,32 @@ namespace RackMount
                 return;
 
             invLoaded = true;
-
             //saves initial crew capacity
             if (startingCrewCapacity == -1)
                 startingCrewCapacity = part.CrewCapacity;
 
+            //resets airlock count
+            if (HighLogic.LoadedSceneIsEditor)
+                partHasAirlock = 0;
+
             //checks for no volume set
             if (autoCalculateVolume && inv.packedVolumeLimit == 0)
                 inv.packedVolumeLimit = Utilities.CalculateVolume(part, volumeAdjustPercent);
+
+            if (autoCalculateEmptyMass && createPart && part.mass == 0)
+            {
+                //bullshit number for 'thickness' of the walls based on temp and crash tolerance
+                //defaults used to normalize maxTemp and crashTolerance
+                //weighs crashTolerance at 4x maxTemp for mass
+                double partThickness = (((part.maxTemp / 2000) + (part.crashTolerance / 9) * 4) / 5);
+                partThickness = 2.5 / (1 + Math.Exp(-0.5 * (partThickness - 3))) + .5;
+
+                double calculatedMass = Utilities.CalculateSurfaceArea(part) * partThickness * massSurfaceArea;
+                int round = 1;
+                if (calculatedMass < 1) round = 2;
+                if (calculatedMass < 0.1) round = 3;
+                part.mass = (float)Math.Round(calculatedMass, round);
+            }
 
             base.OnLoad(node);
 
@@ -101,6 +136,19 @@ namespace RackMount
             //adds CrewCapacity for launch
             AddCrew();
             base.OnInitialize();
+        }
+
+        public override void OnAwake()
+        {
+            base.OnAwake();
+
+            airlocks.Clear();
+
+            foreach (var c in part.GetComponentsInChildren<Collider>())
+                if (c.gameObject.tag == "Airlock")
+                    airlocks.Add(c);
+
+            airlock = part.airlock;
         }
 
         private void Start()
@@ -307,6 +355,48 @@ namespace RackMount
             }
         }
 
+
+        protected void FixedUpdate()
+        {
+            //airlock configs
+            //base code taken from RP-1
+            //https://github.com/KSP-RO/RP-0
+
+            if (!enableAirlocks || !HighLogic.LoadedSceneIsFlight || vessel == null || vessel.mainBody == null || airlocks == null)
+                return;
+
+            bool evaOK = partHasAirlock > 0 || (vessel.mainBody == Planetarium.fetch.Home &&
+                (vessel.situation == Vessel.Situations.LANDED
+                    || vessel.situation == Vessel.Situations.PRELAUNCH
+                    || vessel.situation == Vessel.Situations.SPLASHED
+                    || (vessel.situation == Vessel.Situations.FLYING && vessel.altitude < 20000)));
+
+            foreach (var c in airlocks)
+            {
+                if (evaOK)
+                {
+                    if (c.gameObject.tag != "Airlock")
+                        c.gameObject.tag = "Airlock";
+                }
+                else
+                {
+                    if (c.gameObject.tag == "Airlock")
+                        c.gameObject.tag = "Untagged";
+                }
+            }
+
+            if (evaOK)
+            {
+                if (part.airlock != airlock)
+                    part.airlock = airlock;
+            }
+            else
+            {
+                part.airlock = null;
+            }
+        }
+
+
         //adds button for mounting and unmounting parts
         private void AddRackmountButton(StoredPart storedPart)
         {
@@ -374,6 +464,16 @@ namespace RackMount
         //changes to the host part
         private void RackMountAdjusters(ConfigNode moduleConfigNode)
         {
+            //icrements hasAirlock
+            //done like this in case multiple airlockss are added
+            if(moduleConfigNode.HasValue("hasAirlock"))
+            {
+                bool hasAirlock = false;
+                moduleConfigNode.TryGetValue("hasAirlock", ref hasAirlock);
+                if (hasAirlock)
+                    partHasAirlock++;
+            }
+
             //add crew seat.
             if (moduleConfigNode.HasValue("crewSeat"))
             {
@@ -531,12 +631,14 @@ namespace RackMount
                     {
                         partResource.maxAmount += resource.maxAmount;
                         partResource.amount += resource.amount;
+                        resource.amount = 0;
                         if(part.PartActionWindow != null)
                             part.PartActionWindow.displayDirty = true;
                     }
                     else if (rackMountable)
                     {
                         resource.Load(part);
+                        resource.amount = 0;
                         if (part.PartActionWindow != null)
                             part.PartActionWindow.displayDirty = true;
                     }
@@ -590,6 +692,13 @@ namespace RackMount
                 }
             }
 
+            if(moduleConfigNode.HasValue("hasAirlock"))
+            {
+                bool hasAirlock = false;
+                moduleConfigNode.TryGetValue("hasAirlock", ref hasAirlock);
+                if (hasAirlock)
+                    partHasAirlock--;
+            }
             return true;
         }
 
