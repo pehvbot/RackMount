@@ -112,7 +112,7 @@ namespace RackMount
         public static void AddRackmountedModules(ConfigNode part, AvailablePart available)
         {
             ConfigNode inventory = part.GetNode("MODULE", "name", "ModuleInventoryPart");
-            if (inventory != null && available != null)
+            if (inventory != null || available != null)
             {
                 foreach (ConfigNode stored in inventory.GetNode("STOREDPARTS").GetNodes("STOREDPART"))
                 {
@@ -145,14 +145,59 @@ namespace RackMount
                 }
             }
         }
+        public static ConfigNode RemoveMissingInventoryParts(ConfigNode saveFile)
+        {
+
+            ConfigNode game = saveFile.GetNode("GAME");
+
+            if (game == null)
+                return null;
+
+            ConfigNode flightState = game.GetNode("FLIGHTSTATE");
+
+            if (flightState == null)
+                return null;
+
+            foreach (ConfigNode vessel in flightState.GetNodes("VESSEL"))
+            {
+                foreach (ConfigNode part in vessel.GetNodes("PART"))
+                {
+                    ConfigNode inventory = part.GetNode("MODULE", "name", "ModuleInventoryPart");
+                    if (inventory != null)
+                    {
+                        List<ConfigNode> remove = new List<ConfigNode>();
+                        foreach (ConfigNode stored in inventory.GetNode("STOREDPARTS").GetNodes("STOREDPART"))
+                        {
+
+                            AvailablePart available = PartLoader.getPartInfoByName(stored.GetValue("partName"));
+                            if(available == null)
+                            {
+                                remove.Add(stored);
+                                inventory.GetValue("inventory").Replace(stored.GetValue("partName")+",", "");
+                                inventory.GetValue("inventory").Replace(stored.GetValue("partName"), "");
+                                Debug.LogError("[RM] The part '" + stored.GetValue("partName") + "' stored in vessel '" + vessel.GetValue("name") + "' cannot be found!  It is being removed from the inventory");
+                            }
+                        }
+                        foreach (var item in remove)
+                        {
+                            inventory.GetNode("STOREDPARTS").RemoveNode(item);
+                        }
+                    }
+                }
+            }
+            return saveFile;
+        }
     }
+
     
+
     [HarmonyPatch(typeof(QuickSaveLoad), "quickLoad")]
     internal class QuickLoadPrefix
     {
         public static void Prefix(QuickSaveLoad __instance)
         {
             ConfigNode saveFile = ConfigNode.Load(KSPUtil.ApplicationRootPath + "saves/" + HighLogic.SaveFolder + "/" + Localizer.Format("#autoLOC_6002266") + ".sfs");
+            saveFile = OnGameLoadPatch.RemoveMissingInventoryParts(saveFile);
             saveFile = OnGameLoadPatch.AddPartsFromSave(saveFile);
             saveFile.Save(KSPUtil.ApplicationRootPath + "saves/" + HighLogic.SaveFolder + "/" + Localizer.Format("#autoLOC_6002266") + ".sfs");
         }
@@ -184,6 +229,7 @@ namespace RackMount
             }
 
             ConfigNode saveFile = ConfigNode.Load(KSPUtil.ApplicationRootPath + "saves/" + directory + "/" + selectedGame + ".sfs");
+            saveFile = OnGameLoadPatch.RemoveMissingInventoryParts(saveFile);
             saveFile = OnGameLoadPatch.AddPartsFromSave(saveFile);
             saveFile.Save(KSPUtil.ApplicationRootPath + "saves/" + directory + "/" + selectedGame + ".sfs");
         }

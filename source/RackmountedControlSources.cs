@@ -22,14 +22,17 @@ namespace RackMount
 
             foreach(Part part in ship.Parts)
             {
-                var command = part.FindModuleImplementing<ModuleCommand>();
-                if (command != null)
+                var commands = part.FindModulesImplementing<ModuleCommand>();
+                if (commands != null)
                 {
-                    if (command.minimumCrew == 0)
-                        return true;
-                    PartCrewManifest pcm = manifest.GetPartCrewManifest(part.craftID);
-                    if (pcm != null && pcm.CountCrewNotType(ProtoCrewMember.KerbalType.Tourist, HighLogic.CurrentGame.CrewRoster) >= command.minimumCrew)
-                        return true;
+                    foreach (var command in commands)
+                    {
+                        if (command.minimumCrew == 0)
+                            return true;
+                        PartCrewManifest pcm = manifest.GetPartCrewManifest(part.craftID);
+                        if (pcm != null && pcm.CountCrewNotType(ProtoCrewMember.KerbalType.Tourist, HighLogic.CurrentGame.CrewRoster) >= command.minimumCrew)
+                            return true;
+                    }
                 }
 
                 var seat = part.FindModuleImplementing<KerbalSeat>();

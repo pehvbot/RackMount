@@ -2,6 +2,8 @@
 using System.Collections.Generic;
 using System.Reflection;
 using System;
+using CommNet;
+using Expansions.Missions.Adjusters;
 
 namespace RackMount
 {
@@ -43,9 +45,6 @@ namespace RackMount
         //on load.
         private bool displayVesselNaming = false;
 
-        //keeps track to make sure ModuleInventoryPart is available
-        private bool invLoaded = false;
-
         //airlock configs
         //base code taken from RP-1
         //https://github.com/KSP-RO/RP-0
@@ -63,9 +62,11 @@ namespace RackMount
 
             //aborts module if the part doesn't have an inventory
             if (inv == null)
+            {
+                this.enabled = false;
                 return;
+            }
 
-            invLoaded = true;
             //saves initial crew capacity
             if (startingCrewCapacity == -1)
                 startingCrewCapacity = part.CrewCapacity;
@@ -101,20 +102,30 @@ namespace RackMount
                 //add buttons
                 for (int i = 0; i < inv.storedParts.Count; i++)
                 {
-                    AddRackmountButton(inv.storedParts.At(i));
-
-                    bool mounted = false;
-                    inv.storedParts.At(i).snapshot.partData.TryGetValue("partRackmounted", ref mounted);
-                    if (mounted)
+                    if (PartLoader.getPartInfoByName(inv.storedParts.At(i).partName) == null)
                     {
-                        BaseEvent button = (BaseEvent)Events.Find(x => x.name == "RackmountButton" + inv.storedParts.At(i).slotIndex);
-                        button.guiName = "<b><color=orange>Unmount</color> " + inv.storedParts.At(i).snapshot.partInfo.title + "</b>";
+                        Debug.Log("[RM] The part " + inv.storedParts.At(i).partName + " no longer exists and is being removed from the inventory.");
+                        ScreenMessages.PostScreenMessage($"<color=orange>The part " + inv.storedParts.At(i).partName + " no longer exists and is being removed from the inventory</color>.\nAny rackmounted modules or settings have been removed.", 7);
 
-                        //used for craft files with pre-rackmounted parts
-                        //or if a new part isn't created
-                        if(HighLogic.LoadedSceneIsEditor || !createPart)
+                        inv.storedParts.Remove(i);
+                    }
+                    else
+                    {
+                        AddRackmountButton(inv.storedParts.At(i));
+
+                        bool mounted = false;
+                        inv.storedParts.At(i).snapshot.partData.TryGetValue("partRackmounted", ref mounted);
+                        if (mounted)
                         {
-                            RackmountPart(inv.storedParts.At(i));
+                            BaseEvent button = (BaseEvent)Events.Find(x => x.name == "RackmountButton" + inv.storedParts.At(i).slotIndex);
+                            button.guiName = "<b><color=orange>Unmount</color> " + inv.storedParts.At(i).snapshot.partInfo.title + "</b>";
+
+                            //used for craft files with pre-rackmounted parts
+                            //or if a new part isn't created
+                            if (HighLogic.LoadedSceneIsEditor || !createPart)
+                            {
+                                RackmountPart(inv.storedParts.At(i));
+                            }
                         }
                     }
                 }
@@ -129,9 +140,10 @@ namespace RackMount
 
             //aborts module if the part doesn't have an inventory
             if (inv == null)
+            {
+                this.enabled = false;
                 return;
-
-            invLoaded = true;
+            }
 
             //adds CrewCapacity for launch
             AddCrew();
@@ -154,7 +166,7 @@ namespace RackMount
         private void Start()
         {
             //adds CrewCapacity for loading in Editor
-            if (invLoaded)
+            if (enabled)
                 AddCrew();
         }
 
@@ -231,10 +243,10 @@ namespace RackMount
             if (inv == null)
             {
                 Debug.LogWarning("[RM] No ModuleInventoryPart found on part:" + part.name);
+                this.enabled = false;
                 return;
             }
 
-            invLoaded = true;
 
             base.OnStart(state);
 
@@ -247,7 +259,7 @@ namespace RackMount
 
         public override void OnUpdate()
         {
-            if (!invLoaded)
+            if (!this.enabled)
                 return;
 
             if (HighLogic.LoadedSceneIsFlight)
@@ -260,6 +272,7 @@ namespace RackMount
                     displayVesselNaming = false;
                 }
 
+                /*
                 //show or hide rackmount buttons when PAW is open
                 if (part.PartActionWindow != null && part.PartActionWindow.isActiveAndEnabled)
                 {
@@ -274,13 +287,14 @@ namespace RackMount
                             button.active = false;
                     }
                 }
+                */
             }
             base.OnUpdate();
         }
 
         private void Update()
         {
-            if (!invLoaded)
+            if (!this.enabled)
                 return;
 
             List<uint> currentParts = new List<uint>();
@@ -452,12 +466,23 @@ namespace RackMount
 
         private void RackmountButtonPressed(StoredPart storedPart)
         {
-            bool mounted = false;
-            storedPart.snapshot.partData.TryGetValue("partRackmounted", ref mounted);
-            if (mounted)
-                UnmountPart(storedPart);
+            if (CanRackmount())
+            {
+                bool mounted = false;
+                storedPart.snapshot.partData.TryGetValue("partRackmounted", ref mounted);
+                if (mounted)
+                    UnmountPart(storedPart);
+                else
+                    RackmountPart(storedPart);
+            }
             else
-                RackmountPart(storedPart);
+            {
+                if (HighLogic.CurrentGame.Parameters.CustomParams<RackMountSettings>().requiresEngineer)
+                    ScreenMessages.PostScreenMessage("<color=orange>You need a Kerbal Engineer to rackmount or unmount parts while in flight!</color>\n\nYou need a Kerbal Engineer either on the vessel or on EVA near by", 7);
+                else
+                    ScreenMessages.PostScreenMessage("<color=orange>You need a Kerbal to rackmount or unmount parts while in flight!</color>\n\nYou need a Kerbal either on the vessel or on EVA near by", 7);
+            }
+
         }
 
         //ModuleRackMountPart adjustments and
@@ -465,7 +490,7 @@ namespace RackMount
         private void RackMountAdjusters(ConfigNode moduleConfigNode)
         {
             //icrements hasAirlock
-            //done like this in case multiple airlockss are added
+            //done like this in case multiple airlocks are added
             if(moduleConfigNode.HasValue("hasAirlock"))
             {
                 bool hasAirlock = false;
@@ -612,7 +637,6 @@ namespace RackMount
                         moduleSnapshot.moduleValues.SetValue("modulePersistentId", partModule.GetPersistentId(), true);
                     partModule.OnStart(part.GetModuleStartState());
                     partModule.OnStartFinished(part.GetModuleStartState());
-
                 }
                 storedPartModuleIndex++;
             }
@@ -666,7 +690,7 @@ namespace RackMount
                 //checks to see if seat is full
                 if (part.protoModuleCrew.Count > part.CrewCapacity - int.Parse(moduleConfigNode.GetValue("crewSeat")))
                 {
-                    ScreenMessages.PostScreenMessage($"<color=orange>The seat is still being used! </color> You cannot unmount this part, a kerbal is still sitting in it.", 7);
+                    ScreenMessages.PostScreenMessage($"<color=orange>The seat is still being used! </color>\n\nYou cannot unmount this part, a kerbal is still sitting in it.", 7);
                     return false;
                 }
 
@@ -692,13 +716,11 @@ namespace RackMount
                 }
             }
 
-            if(moduleConfigNode.HasValue("hasAirlock"))
-            {
-                bool hasAirlock = false;
-                moduleConfigNode.TryGetValue("hasAirlock", ref hasAirlock);
-                if (hasAirlock)
-                    partHasAirlock--;
-            }
+            bool hasAirlock = false;
+            moduleConfigNode.TryGetValue("hasAirlock", ref hasAirlock);
+            if (hasAirlock)
+                partHasAirlock--;
+
             return true;
         }
 
@@ -807,7 +829,6 @@ namespace RackMount
                 }
                 */
             }
-
             storedPart.snapshot.partData.SetValue("partRackmounted", false, true);
 
             //unlocking always happens from paw?
@@ -824,8 +845,8 @@ namespace RackMount
 
         private bool CanRackmount()
         {
-            //for debugging
-            if (HighLogic.CurrentGame.Parameters.CustomParams<RackMountSettings>().canAlwaysRackmount)
+            //for editor or when debugging
+            if (HighLogic.CurrentGame.Parameters.CustomParams<RackMountSettings>().canAlwaysRackmount || HighLogic.LoadedSceneIsEditor)
                 return true;
 
             //next check for kerbal on EVA.  
