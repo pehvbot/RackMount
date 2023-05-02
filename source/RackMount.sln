@@ -5,7 +5,11 @@ VisualStudioVersion = 16.0.810.14
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RackMount", "RackMount.csproj", "{CB940433-173F-4662-9AAB-1235E7073DDD}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RackMountKerbalism", "RackMountKerbalism\RackMountKerbalism.csproj", "{5F3B4C28-A35D-466C-BBFA-49A2BB8B2AA3}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RackMountKCT", "RackMountKCT\RackMountKCT.csproj", "{4A1A7D71-65AA-4662-2BC1-4210303DFA36}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RackMountRP0KCT", "RackMountRP0KCT\RackMountRP0KCT.csproj", "{9AAF432C-7B31-4F17-8F74-13C3A7B8178D}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RackMountKerbalism", "RackMountKerbalism\RackMountKerbalism.csproj", "{9C2D7D26-6B2E-473B-846E-305A8B8E5D92}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -17,10 +21,18 @@ Global
 		{CB940433-173F-4662-9AAB-1235E7073DDD}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{CB940433-173F-4662-9AAB-1235E7073DDD}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{CB940433-173F-4662-9AAB-1235E7073DDD}.Release|Any CPU.Build.0 = Release|Any CPU
-		{5F3B4C28-A35D-466C-BBFA-49A2BB8B2AA3}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{5F3B4C28-A35D-466C-BBFA-49A2BB8B2AA3}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{5F3B4C28-A35D-466C-BBFA-49A2BB8B2AA3}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{5F3B4C28-A35D-466C-BBFA-49A2BB8B2AA3}.Release|Any CPU.Build.0 = Release|Any CPU
+		{4A1A7D71-65AA-4662-2BC1-4210303DFA36}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{4A1A7D71-65AA-4662-2BC1-4210303DFA36}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{4A1A7D71-65AA-4662-2BC1-4210303DFA36}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{4A1A7D71-65AA-4662-2BC1-4210303DFA36}.Release|Any CPU.Build.0 = Release|Any CPU
+		{9AAF432C-7B31-4F17-8F74-13C3A7B8178D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{9AAF432C-7B31-4F17-8F74-13C3A7B8178D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{9AAF432C-7B31-4F17-8F74-13C3A7B8178D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{9AAF432C-7B31-4F17-8F74-13C3A7B8178D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{9C2D7D26-6B2E-473B-846E-305A8B8E5D92}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{9C2D7D26-6B2E-473B-846E-305A8B8E5D92}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{9C2D7D26-6B2E-473B-846E-305A8B8E5D92}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{9C2D7D26-6B2E-473B-846E-305A8B8E5D92}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

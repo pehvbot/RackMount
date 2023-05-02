@@ -74,9 +74,6 @@
     <Reference Include="HarmonyInstallChecker">
       <HintPath>..\..\KSP RackMount\GameData\000_Harmony\HarmonyInstallChecker.dll</HintPath>
     </Reference>
-    <Reference Include="RackMountKerbalism">
-      <HintPath>RackMountKerbalism\bin\Debug\RackMountKerbalism.dll</HintPath>
-    </Reference>
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Properties\AssemblyInfo.cs" />

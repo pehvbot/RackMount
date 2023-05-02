@@ -19,7 +19,7 @@ namespace RackMount
         public bool autoCalculateEmptyMass = true;
 
         [KSPField]
-        public float massSurfaceArea = 0.027f;
+        public float massSurfaceArea = 0.03f;
 
         [KSPField]
         public string partType = "";
@@ -40,11 +40,6 @@ namespace RackMount
 
         private BasePAWGroup rackmountGroup = new BasePAWGroup("rackmountGroup", "Rackmount Inventory", false);
 
-        //needed to turn on vessel renaming when a ModuleCommand part is installed.
-        //For some reason putting it in OnUpdate() allows it to be displayed
-        //on load.
-        private bool displayVesselNaming = false;
-
         //airlock configs
         //base code taken from RP-1
         //https://github.com/KSP-RO/RP-0
@@ -58,12 +53,14 @@ namespace RackMount
 
         public override void OnLoad(ConfigNode node)
         {
+            if (!this.enabled)
+                return;
+
             inv = part.Modules.GetModule<ModuleInventoryPart>();
 
             //aborts module if the part doesn't have an inventory
             if (inv == null)
             {
-                this.enabled = false;
                 return;
             }
 
@@ -135,6 +132,9 @@ namespace RackMount
        
         public override void OnInitialize()
         {
+            if (!this.enabled)
+                return;
+
             if (inv == null)
                 inv = part.Modules.GetModule<ModuleInventoryPart>();
 
@@ -152,6 +152,9 @@ namespace RackMount
 
         public override void OnAwake()
         {
+            if (!this.enabled)
+                return;
+
             base.OnAwake();
 
             airlocks.Clear();
@@ -166,7 +169,7 @@ namespace RackMount
         private void Start()
         {
             //adds CrewCapacity for loading in Editor
-            if (enabled)
+            if (this.enabled && (HighLogic.LoadedSceneIsEditor || !createPart))
                 AddCrew();
         }
 
@@ -247,49 +250,23 @@ namespace RackMount
                 return;
             }
 
-
             base.OnStart(state);
 
             inv.Fields["InventorySlots"].group = rackmountGroup;
             inv.Fields["InventorySlots"].guiName = null;
-            //if (HighLogic.LoadedSceneIsFlight)
-            //    inv.Fields["InventorySlots"].group.startCollapsed = true;
 
         }
 
-        public override void OnUpdate()
+        public override void OnStartFinished(StartState state)
         {
-            if (!this.enabled)
-                return;
+            base.OnStartFinished(state);
 
-            if (HighLogic.LoadedSceneIsFlight)
+            //activates vessel naming
+            if (part.Modules.Contains<ModuleCommand>())
             {
-                //fugly way to display Vessel Renaming when ModuleCommand is
-                //mounted OnLoad 
-                if (displayVesselNaming)
-                {
-                    part.Events["SetVesselNaming"].guiActive = true;
-                    displayVesselNaming = false;
-                }
-
-                /*
-                //show or hide rackmount buttons when PAW is open
-                if (part.PartActionWindow != null && part.PartActionWindow.isActiveAndEnabled)
-                {
-                    if (CanRackmount())
-                    {
-                        foreach (var button in Events.FindAll(x => x.name.Contains("RackmountButton")))
-                            button.active = true;
-                    }
-                    else
-                    {
-                        foreach (var button in Events.FindAll(x => x.name.Contains("RackmountButton")))
-                            button.active = false;
-                    }
-                }
-                */
+                part.Events["SetVesselNaming"].guiActive = true;
+                part.Events["SetVesselNaming"].guiActiveEditor = true;
             }
-            base.OnUpdate();
         }
 
         private void Update()
@@ -358,14 +335,6 @@ namespace RackMount
                     }
 
                 }
-            }
-
-            //fugly way to display Vessel Renaming when ModuleCommand is
-            //mounted OnLoad in the Editor
-            if (HighLogic.LoadedSceneIsEditor && displayVesselNaming)
-            {
-                part.Events["SetVesselNaming"].guiActiveEditor = true;
-                displayVesselNaming = false;
             }
         }
 
@@ -460,8 +429,6 @@ namespace RackMount
             Events.Remove(Events.Find(x => x.name == "RackmountButton" + slot));
 
             rackMountableParts.Remove(id);
-            if (part.PartActionWindow != null)
-                part.PartActionWindow.UpdateWindow();
         }
 
         private void RackmountButtonPressed(StoredPart storedPart)
@@ -471,7 +438,14 @@ namespace RackMount
                 bool mounted = false;
                 storedPart.snapshot.partData.TryGetValue("partRackmounted", ref mounted);
                 if (mounted)
-                    UnmountPart(storedPart);
+                {
+                    //checks for running KERBALISM.ProcessControllers
+                    //can't unmount if they are running.
+                    if(HasRunningProcessController(storedPart))
+                        ScreenMessages.PostScreenMessage("<color=orange>A Kerbalism Process Controller is running!</color>\n\nYou cannot unmount this part until you turn this process off.", 7);
+                    else
+                        UnmountPart(storedPart);
+                }
                 else
                     RackmountPart(storedPart);
             }
@@ -534,6 +508,24 @@ namespace RackMount
                     manifest.partCrew = newCrew;
                     manifest.PartInfo.partPrefab.CrewCapacity = part.CrewCapacity;
                     manifest.PartInfo.partConfig.SetValue("CrewCapacity", part.CrewCapacity);
+                    manifest.PartInfo.partPrefab.isControlSource = Vessel.ControlLevel.FULL;
+
+                    //adds crew to the first command part
+                    if (HighLogic.LoadedSceneIsEditor)
+                    {
+                        var defaulRoster = HighLogic.CurrentGame.CrewRoster.DefaultCrewForVessel(ShipConstruction.ShipConfig).PartManifests[0];
+                        if (defaulRoster.PartID == manifest.PartID)
+                        {
+                            int seatNumber = 0;
+                            foreach (var crewMember in defaulRoster.GetPartCrew())
+                            {
+                                //checks to see if there is crew available and hasn't already been assigned to the part
+                                if (crewMember != null && !manifest.Contains(crewMember))
+                                    manifest.AddCrewToSeat(crewMember, seatNumber);
+                                seatNumber++;
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -579,12 +571,12 @@ namespace RackMount
                         if (availablePartModule.moduleName == "Experiment")
                         {
                             availablePartModule.OnStart(StartState.None);
-                            RackMountKerbalism.CompileModuleInfos(availablePartModule);
                         }
-                        
+
                         availablePart.partPrefab.gameObject.SetActive(value: false);
                         availablePart.partConfig.AddNode(moduleConfigNode);
                     }
+                
                     partModule.Awake();
                     partModule.OnActive();
 
@@ -613,8 +605,6 @@ namespace RackMount
                     {
                         part.Events["SetVesselNaming"].guiActive = true;
                         part.Events["SetVesselNaming"].guiActiveEditor = true;
-                        //Here so it display the Vessel Naming from OnLoad using Update
-                        displayVesselNaming = true;
 
                         ModuleCommand c = (ModuleCommand)partModule;
                         DictionaryValueList<string, ControlPoint> controlPoints = new DictionaryValueList<string, ControlPoint>();
@@ -675,8 +665,6 @@ namespace RackMount
             //sets button and updates PAW
             BaseEvent button = (BaseEvent)Events.Find(x => x.name == "RackmountButton" + storedPart.slotIndex);
             button.guiName = "<b><color=orange>Unmount</color> " + storedPart.snapshot.partInfo.title + "</b>";
-            if (part.PartActionWindow != null)
-                part.PartActionWindow.UpdateWindow();
         }
 
         //removes part adjusters
@@ -775,7 +763,6 @@ namespace RackMount
                         {
                             part.Events["SetVesselNaming"].guiActive = false;
                             part.Events["SetVesselNaming"].guiActiveEditor = false;
-                            displayVesselNaming = false;
                         }
                     }
                 }
@@ -795,11 +782,10 @@ namespace RackMount
                 {
                     part.partInfo.partPrefab.RemoveModule(part.partInfo.partPrefab.Modules.GetModule(part.Modules.IndexOf(partModule)));
                 }
+
                 partModule.OnInactive();
                 part.RemoveModule(partModule);
             }
-
-            List<ProtoPartResourceSnapshot> removeResources = new List<ProtoPartResourceSnapshot>();
 
             foreach (ProtoPartResourceSnapshot resource in storedPart.snapshot.resources)
             {
@@ -820,14 +806,6 @@ namespace RackMount
                             part.PartActionWindow.displayDirty = true;
                     }
                 }
-                /*
-                else
-                {
-                    //removes a resource added directly by the module
-                    //possible bug since this is to remove Kerbalism process resources
-                    part.Resources.Remove(resource.resourceName);
-                }
-                */
             }
             storedPart.snapshot.partData.SetValue("partRackmounted", false, true);
 
@@ -839,8 +817,28 @@ namespace RackMount
             BaseEvent button = (BaseEvent)Events.Find(x => x.name == "RackmountButton" + storedPart.slotIndex);
             button.guiName = "<b><color=green>Rackmount</color> " + storedPart.snapshot.partInfo.title + "</b>";
 
-            if (part.PartActionWindow != null)
-                part.PartActionWindow.UpdateWindow();
+        }
+
+        //checks for running KERBALISM.ProcessControllers
+        //Unmounting them while running creates problems with phantom resources.
+        private bool HasRunningProcessController(StoredPart storedPart)
+        {
+            foreach (PartModule partModule in part.Modules)
+            {
+                if (partModule.moduleName == "ProcessController")
+                {
+                    foreach (var module in storedPart.snapshot.modules)
+                    {
+                        if (module.moduleValues.GetValue("modulePersistentId") == partModule.GetPersistentId().ToString())
+                        {
+                            if (partModule.Fields.GetValue<bool>("running") == true)
+                                return true;
+                        }
+                    }
+                }
+            }
+
+            return false;
         }
 
         private bool CanRackmount()

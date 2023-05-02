@@ -3,10 +3,10 @@
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-    <ProjectGuid>{9C2D7D26-6B2E-473B-846E-305A8B8E5D92}</ProjectGuid>
+    <ProjectGuid>{4A1A7D71-65AA-4662-2BC1-4210303DFA36}</ProjectGuid>
     <OutputType>Library</OutputType>
-    <RootNamespace>RackMount.Kerbalism</RootNamespace>
-    <AssemblyName>RackMountKerbalism</AssemblyName>
+    <RootNamespace>RackMount.KCT</RootNamespace>
+    <AssemblyName>RackMountKCT</AssemblyName>
     <TargetFrameworkVersion>v4.7.2</TargetFrameworkVersion>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
@@ -60,16 +60,19 @@
     <Reference Include="UnityEngine.InputModule">
       <HintPath>..\..\dlls_1_12_2\UnityEngine.InputModule.dll</HintPath>
     </Reference>  
-    <Reference Include="Kerbalism112">
-      <HintPath>..\..\dlls_1_12_2\Kerbalism112.dll</HintPath>
-    </Reference>
     <Reference Include="0Harmony">
       <HintPath>..\..\dlls_1_12_2\0Harmony.dll</HintPath>
+    </Reference>
+    <Reference Include="RackMount">
+      <HintPath>..\..\GameData\RackMount\plugins\RackMount.dll</HintPath>
+    </Reference>
+    <Reference Include="KerbalConstructionTime">
+      <HintPath>..\..\dlls_1_12_2\KerbalConstructionTime.dll</HintPath>
     </Reference>
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="RackMountKerbalism.cs" />
+    <Compile Include="RackMountKCT.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
 </Project>

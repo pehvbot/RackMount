@@ -12,7 +12,7 @@ namespace RackMount
     //scrubs out RackMount part names for originalPart names when a ship is loaded from cache
     //removes old .RM craft files
     [KSPAddon(KSPAddon.Startup.EditorAny, false)]
-    public class OnEditorLoad : MonoBehaviour
+    public class OnEditorLoadPatch : MonoBehaviour
     {
         private void Awake()
         {
@@ -140,14 +140,23 @@ namespace RackMount
                                     availablePartModule.OnStart(StartState.None);
                                 }
                             }
+
+                            if(moduleConfigNode.HasValue("crewSeat"))
+                            {
+                                available.partPrefab.CrewCapacity += int.Parse(moduleConfigNode.GetValue("crewSeat"));
+                                available.partConfig.SetValue("CrewCapacity", available.partPrefab.CrewCapacity);
+                            }
                         }
                     }
                 }
             }
         }
+
+        //this should really be something KSP itself looks for.
+        //currently missing stored parts will crash the game load.
+        //[TODO] use the KSP missing parts handling code instead of this.
         public static ConfigNode RemoveMissingInventoryParts(ConfigNode saveFile)
         {
-
             ConfigNode game = saveFile.GetNode("GAME");
 
             if (game == null)
@@ -189,12 +198,10 @@ namespace RackMount
         }
     }
 
-    
-
     [HarmonyPatch(typeof(QuickSaveLoad), "quickLoad")]
     internal class QuickLoadPrefix
     {
-        public static void Prefix(QuickSaveLoad __instance)
+        public static void Prefix()
         {
             ConfigNode saveFile = ConfigNode.Load(KSPUtil.ApplicationRootPath + "saves/" + HighLogic.SaveFolder + "/" + Localizer.Format("#autoLOC_6002266") + ".sfs");
             saveFile = OnGameLoadPatch.RemoveMissingInventoryParts(saveFile);
@@ -236,7 +243,7 @@ namespace RackMount
     }
 
     [HarmonyPatch(typeof(EditorLogic), "GetStockPreFlightCheck")]
-    internal class GetStockPreFlightCheck
+    internal class GetStockPreFlightCheckPatch
     {
         public static void Postfix(PreFlightCheck __result)
         {
@@ -256,18 +263,13 @@ namespace RackMount
         }
     }
 
-
-    [HarmonyPatch(typeof(EditorLogic), "goForLaunch")]
-    internal class GoForLaunchPatch
+    [HarmonyPatch(typeof(FlightDriver), "StartWithNewLaunch")]
+    internal class StartWithNewLaunchPatch
     {
-        public static void Prefix(EditorLogic __instance)
+        public static void Prefix(ref string fullFilePath, string missionFlagURL, string launchSiteName, VesselCrewManifest manifest)
         {
-            //Get savedCraftPath via reflection so we can write to it as well
-            var savedCraftPathObject = __instance.GetType().GetField("savedCraftPath", BindingFlags.NonPublic | BindingFlags.Instance);
-            string savedCraftPath = (string)savedCraftPathObject.GetValue(__instance);
-
             //load original craft file and copies it
-            ConfigNode saveFile = ConfigNode.Load(savedCraftPath).CreateCopy();
+            ConfigNode saveFile = ConfigNode.Load(fullFilePath).CreateCopy();
 
             if (saveFile == null)
                 return;
@@ -288,7 +290,6 @@ namespace RackMount
 
                 //looks for ModuleRackMount which should generate a new part on launch
                 //potentially spams a lot of new parts for reverted vessels
-                //unclear how KCT will react to this
                 ConfigNode rackMountModule = part.GetNode("MODULE", "name", "ModuleRackMount");
                 if (rackMountModule != null)
                 {
@@ -312,16 +313,27 @@ namespace RackMount
                     }
                 }
             }
-            
+
             if (saveCraftfile)
             {
                 //change path to new craft file
-                savedCraftPath = savedCraftPath + ".RM";
-                savedCraftPathObject.SetValue(__instance, savedCraftPath);
+                fullFilePath = fullFilePath + ".RM";
 
                 //save new file
-                saveFile.Save(savedCraftPath);
+                saveFile.Save(fullFilePath);
             }
         }
+    }
+
+    //resets all vessels on revert to launch
+    //unclear what problems this will cause
+    [HarmonyPatch(typeof(FlightDriver), "RevertToLaunch")]
+    internal class RevertToLaunchPatch
+    {
+        public static void Prefix()
+        {
+            OnGameLoadPatch.AddPartsFromSave(FlightDriver.PostInitState.Config);
+        }
+
     }
 }
