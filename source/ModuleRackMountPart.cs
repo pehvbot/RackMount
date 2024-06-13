@@ -19,6 +19,9 @@ namespace RackMount
         [KSPField]
         public bool hasAirlock;
 
+        [KSPField]
+        public bool mountInEditorOnly = false;
+
         public override void OnLoad(ConfigNode node)
         {
             base.OnLoad(node);

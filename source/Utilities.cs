@@ -21,7 +21,6 @@ namespace RackMount
             }
 
             //gets the bounds as a sanity check
-            //gets the bounds as a sanity check
             Bounds bounds = default(Bounds);
             foreach (var bound in part.GetRendererBounds())
             {

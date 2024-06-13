@@ -22,3 +22,4 @@
 /Users/haslam/Google Drive/kerbal/RackMount/source/RackMountKerbalism/obj/Debug/RackMountKerbalism.dll
 /Users/haslam/Google Drive/kerbal/RackMount/source/RackMountKerbalism/obj/Debug/RackMountKerbalism.pdb
 /Users/haslam/Google Drive/kerbal/RackMount/source/RackMountKerbalism/obj/Debug/RackMountKerbalism.csproj.AssemblyReference.cache
+/Users/haslam/Google Drive/kerbal/RackMount/source/RackMountKerbalism/bin/Debug/0Harmony.dll

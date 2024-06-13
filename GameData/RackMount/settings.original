@@ -8,11 +8,11 @@
 //
 
 //Basic settings only.  Should work with existing saves in stock and stock-ish games
-//@RACKMOUNTCONFNAME:FOR[RackMountBasic]{}
+@RACKMOUNTCONFNAME:FOR[RackMountBasic]{}
 
 //Advanced settings.  This WILL break existing save games started without this setting.
 //Highly experimental.
-@RACKMOUNTCONFNAME:FOR[RackMountAdvanced]{}
+//@RACKMOUNTCONFNAME:FOR[RackMountAdvanced]{}
 
 RACKMOUNTSETTINGS {}
 

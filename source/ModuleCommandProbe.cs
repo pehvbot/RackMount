@@ -1,4 +1,8 @@
-﻿using System;
+﻿//extends ModuleCommand so this module ignores crew and crewcapacity when determining if a vessel is controlled.
+//this gets around the 'bug' that parts with minimumCrew=0 and crewCapacity>0 will have full control regardless of comms
+//used for rackmountable command cores
+
+using System;
 using CommNet;
 using KSP.Localization;
 using UnityEngine;

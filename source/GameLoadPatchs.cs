@@ -325,9 +325,20 @@ namespace RackMount
         }
     }
 
+    //resets all vessels on revert to vab
+    //unclear what problems this will cause
+    [HarmonyPatch(typeof(FlightDriver), nameof(FlightDriver.RevertToPrelaunch))]
+    internal class RevertToPreLaunchPatch
+    {
+        public static void Prefix()
+        {
+            OnGameLoadPatch.AddPartsFromSave(FlightDriver.PreLaunchState.Config);
+        }
+    }
+
     //resets all vessels on revert to launch
     //unclear what problems this will cause
-    [HarmonyPatch(typeof(FlightDriver), "RevertToLaunch")]
+    [HarmonyPatch(typeof(FlightDriver), nameof(FlightDriver.RevertToLaunch))]
     internal class RevertToLaunchPatch
     {
         public static void Prefix()

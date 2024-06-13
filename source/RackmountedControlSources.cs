@@ -8,8 +8,8 @@ namespace RackMount
 	{
         public RackmountedControlSources()
         {
-
         }
+
         public override bool TestCondition()
         {
             Part root = EditorLogic.RootPart;

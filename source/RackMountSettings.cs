@@ -1,9 +1,33 @@
 ﻿using System;
+using System.IO;
+using UnityEngine;
+
 namespace RackMount
 {
+    [KSPAddon(KSPAddon.Startup.Instantly, false)]
+    public sealed class Loader : MonoBehaviour
+    {
+        private void Awake()
+        {
+            string settings = Path.Combine(KSPUtil.ApplicationRootPath, "GameData/RackMount/settings.cfg");
+            string original = Path.Combine(KSPUtil.ApplicationRootPath, "GameData/RackMount/settings.original");
+            if (!File.Exists(settings))
+            {
+                if (File.Exists(original))
+                {
+                    File.Copy(original, settings, true);
+                }
+                else
+                {
+                    Debug.LogError("[RM] RackMount cannot find a settings file.  Your game will not run correctly!  Check to make sure the mod is installed correctly.  The RackMount folder must installed directly withing your game's GameData folder.");
+                }
+            }
+        }
+    }
+
+
     public class RackMountSettings : GameParameters.CustomParameterNode
     {
-
         public RackMountSettings()
         {
         }
