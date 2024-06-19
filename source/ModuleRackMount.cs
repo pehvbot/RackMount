@@ -1,9 +1,11 @@
-﻿using UnityEngine;
+﻿using System;
 using System.Collections.Generic;
-using System.Reflection;
-using System;
-using CommNet;
-using Expansions.Missions.Adjusters;
+using HarmonyLib;
+using UnityEngine;
+using UnityEngine.EventSystems;
+using KSP.UI.Screens;
+using UnityEngine.UI;
+using TMPro;
 
 namespace RackMount
 {
@@ -24,7 +26,7 @@ namespace RackMount
         [KSPField]
         public string partType = "";
 
-        [KSPField(isPersistant =true)]
+        [KSPField(isPersistant = true)]
         public bool createPart = false;
 
         [KSPField(isPersistant = true)]
@@ -33,12 +35,11 @@ namespace RackMount
         [KSPField(isPersistant = true)]
         public int startingCrewCapacity = -1;
 
-        Dictionary<uint, int> rackMountableParts = new Dictionary<uint, int>();
-        Dictionary<uint, int> unMountableParts = new Dictionary<uint, int>();
-
         private ModuleInventoryPart inv;
 
         private BasePAWGroup rackmountGroup = new BasePAWGroup("rackmountGroup", "Rackmount Inventory", false);
+
+        Dictionary<int, Image> images = new Dictionary<int, Image>();
 
         //airlock configs
         //base code taken from RP-1
@@ -80,19 +81,7 @@ namespace RackMount
 
             //checks for empty part mass
             if (autoCalculateEmptyMass && createPart && part.mass == 0)
-            {
-                //bullshit number for 'thickness' of the walls based on temp and crash tolerance
-                //defaults used to normalize maxTemp and crashTolerance
-                //weighs crashTolerance at 4x maxTemp for mass
-                double partThickness = (((part.maxTemp / 2000) + (part.crashTolerance / 9) * 4) / 5);
-                partThickness = 2.5 / (1 + Math.Exp(-0.5 * (partThickness - 3))) + .5;
-
-                double calculatedMass = Utilities.CalculateSurfaceArea(part) * partThickness * massSurfaceArea;
-                int round = 1;
-                if (calculatedMass < 1) round = 2;
-                if (calculatedMass < 0.1) round = 3;
-                part.mass = (float)Math.Round(calculatedMass, round);
-            }
+                part.mass = Utilities.CalculateEmptyMass(part, massSurfaceArea);
 
             base.OnLoad(node);
 
@@ -104,7 +93,7 @@ namespace RackMount
                 {
                     if (PartLoader.getPartInfoByName(inv.storedParts.At(i).partName) == null)
                     {
-                        Debug.Log("[RM] The part " + inv.storedParts.At(i).partName + " no longer exists and is being removed from the inventory.");
+                        Debug.LogWarning("[RM] The part " + inv.storedParts.At(i).partName + " no longer exists and is being removed from the inventory.");
                         ScreenMessages.PostScreenMessage($"<color=orange>The part " + inv.storedParts.At(i).partName + " no longer exists and is being removed from the inventory</color>.\nAny rackmounted modules or settings have been removed.", 7);
 
                         inv.storedParts.Remove(i);
@@ -131,7 +120,6 @@ namespace RackMount
                 }
             }
         }
-
        
         public override void OnInitialize()
         {
@@ -170,8 +158,6 @@ namespace RackMount
                 AddCrew();
         }
 
-   
-
         public override void OnStart(StartState state)
         {
             if (!this.enabled)
@@ -202,83 +188,11 @@ namespace RackMount
             }
         }
 
+        //airlock configs
+        //base code taken from RP-1
+        //https://github.com/KSP-RO/RP-0
         private void FixedUpdate()
         {
-            if (!this.enabled)
-                return;
-
-            List<uint> currentParts = new List<uint>();
-            Dictionary<uint, int> buttonsToRemove = new Dictionary<uint, int>();
-
-            //kludgy way to avoid updating PAW when in the crew selection screen to avoid massive slowdowns.
-            bool updatePAW = true;
-            if (HighLogic.LoadedSceneIsEditor && EditorLogic.fetch.editorScreen == EditorScreen.Crew)
-                updatePAW = false;
-
-            //looks for any changes when the PAW is open
-            if (part.PartActionWindow != null && part.PartActionWindow.isActiveAndEnabled && updatePAW)
-            {
-                //looks for new parts
-                for (int i = 0; i < inv.storedParts.Count; i++)
-                {
-                    if (!rackMountableParts.ContainsKey(inv.storedParts.At(i).snapshot.persistentId) && !unMountableParts.ContainsKey(inv.storedParts.At(i).snapshot.persistentId))
-                        AddRackmountButton(inv.storedParts.At(i));
-                    currentParts.Add(inv.storedParts.At(i).snapshot.persistentId);
-                }
-
-                //looks for removed parts
-                foreach (KeyValuePair<uint, int> rackMountablePart in rackMountableParts)
-                {
-                    if (!currentParts.Contains(rackMountablePart.Key))
-                        buttonsToRemove.Add(rackMountablePart.Key, rackMountablePart.Value);
-                }
-                foreach (KeyValuePair<uint, int> button in buttonsToRemove)
-                {
-                    RemoveRackmountButton(button.Key, button.Value);
-                }
-
-                //locks mounted parts.  Done in Update() because doing an EVA and going into Engineering mode re-enables the slotButton.
-                UIPartActionInventory inventoryUI = (UIPartActionInventory)part.PartActionWindow.ListItems.Find(x => x.GetType() == typeof(UIPartActionInventory));
-                if (inventoryUI != null)
-                {
-                    for (int i = 0; i < inv.storedParts.Count; i++)
-                    {
-                        bool mounted = false;
-                        inv.storedParts.At(i).snapshot.partData.TryGetValue("partRackmounted", ref mounted);
-                        if (mounted)
-                        {
-                            inventoryUI.slotButton[inv.storedParts.At(i).slotIndex].enabled = false;
-                            inventoryUI.slotButton[inv.storedParts.At(i).slotIndex].gameObject.SetActive(false);
-                        }
-                    }
-                }
-            }
-
-            //checks for construction mode and locks/unlocks mounted items
-            if (inv.constructorModeInventory != null && inv.constructorModeInventory.isActiveAndEnabled)
-            {
-                for (int i = 0; i < inv.storedParts.Count; i++)
-                {
-                    bool mounted = false;
-                    inv.storedParts.At(i).snapshot.partData.TryGetValue("partRackmounted", ref mounted);
-                    if (mounted)
-                    {
-                        inv.constructorModeInventory.slotButton[inv.storedParts.At(i).slotIndex].enabled = false;
-                        inv.constructorModeInventory.slotButton[inv.storedParts.At(i).slotIndex].gameObject.SetActive(false);
-                    }
-                    else
-                    {
-                        inv.constructorModeInventory.slotButton[inv.storedParts.At(i).slotIndex].enabled = true;
-                        inv.constructorModeInventory.slotButton[inv.storedParts.At(i).slotIndex].gameObject.SetActive(true);
-                    }
-
-                }
-            }
-        
-            //airlock configs
-            //base code taken from RP-1
-            //https://github.com/KSP-RO/RP-0
-
             if (!enableAirlocks || !HighLogic.LoadedSceneIsFlight || vessel == null || vessel.mainBody == null || airlocks == null)
                 return;
 
@@ -313,6 +227,101 @@ namespace RackMount
             }
         }
 
+        public void SetupIcons(UIPartActionInventory iconInv)
+        {
+            foreach (var image in images)
+                image.Value.gameObject.DestroyGameObject();
+
+            images.Clear();
+
+            for (int i  = 0; i < iconInv.slotPartIcon.Count; i++)
+            {
+                if (iconInv.slotPartIcon[i].inInventory)
+                {
+                    bool mounted = false;
+                    inv.storedParts[i].snapshot.partData.TryGetValue("partRackmounted", ref mounted);
+
+                    SetupIcon(iconInv.slotPartIcon[i], i);
+                }
+            }
+        }
+
+        private void SetupIcon(EditorPartIcon icon, int slot)
+        {
+            if (!icon.partInfo.partPrefab.Modules.Contains<ModuleRackMountPart>()
+                || !icon.partInfo.partPrefab.Modules.GetModule<ModuleRackMountPart>().partRackmountable)
+                return;
+
+            Image swatch = new GameObject("TagSwatch").AddComponent<Image>();
+
+            if(!images.ContainsKey(slot))
+                images.Add(slot, swatch);
+
+            swatch.sprite = VABOrganizerAssets.Sprites["organizer-carat"];
+            swatch.type = Image.Type.Sliced;
+            swatch.gameObject.SetLayerRecursive(LayerMask.NameToLayer("UI"));
+
+            bool mounted = false;
+            inv.storedParts[slot].snapshot.partData.TryGetValue("partRackmounted", ref mounted);
+
+            if (mounted)
+                swatch.color = new Color(0.6f, 0.2f, 0.2f, 0.6f);
+            else
+                swatch.color = new Color(0.2f, 0.6f, 0.2f, 0.6f);
+
+
+            swatch.transform.SetParent(icon.gameObject.transform, false);
+            ContentSizeFitter csf = swatch.gameObject.AddComponent<ContentSizeFitter>();
+            VerticalLayoutGroup vlg = swatch.gameObject.AddComponent<VerticalLayoutGroup>();
+            vlg.childControlWidth = true;
+            vlg.childForceExpandHeight = vlg.childForceExpandWidth = vlg.childScaleHeight = vlg.childScaleWidth = vlg.childControlHeight = false;
+            csf.horizontalFit = ContentSizeFitter.FitMode.PreferredSize;
+            RectTransform rect = swatch.GetComponent<RectTransform>();
+
+            rect.anchorMin = rect.anchorMax = rect.pivot = Vector2.zero;
+            rect.offsetMin = new Vector2(0, 52);
+            rect.offsetMax = new Vector2(27, 66);
+
+            TextMeshProUGUI textObj = new GameObject("Tag").AddComponent<TextMeshProUGUI>();
+
+            if (mounted)
+                textObj.text = "<b>|  Mounted |</b>";
+            else
+                textObj.text = "<b>Unmounted</b>";
+
+            textObj.fontSize = 11;
+            textObj.margin = new Vector4(4, 2, 3, 0);
+            textObj.overflowMode = TextOverflowModes.Truncate;
+            textObj.gameObject.SetLayerRecursive(LayerMask.NameToLayer("UI"));
+            textObj.transform.SetParent(rect.transform, false);
+            textObj.enableWordWrapping = false;
+
+            rect = textObj.GetComponent<RectTransform>();
+            rect.anchorMin = rect.anchorMax = rect.pivot = Vector2.zero;
+            rect.offsetMin = new Vector2(3, 48);
+            rect.offsetMax = new Vector2(16, 64);
+        }
+
+        //called by Harmony OnModuleInventorySlotChangedPrefix to update buttons
+        public void UpdateRackmountButtons(UIPartActionInventory actionInv, int slotChanged)
+        {
+            if (inv.storedParts.ContainsKey(slotChanged))
+            {
+                SetupIcon(actionInv.slotPartIcon[slotChanged], slotChanged);
+                AddRackmountButton(inv.storedParts[slotChanged]);
+            }
+            else
+            {
+                if (images.ContainsKey(slotChanged))
+                {
+                    images[slotChanged].gameObject.DestroyGameObject();
+                    images.Remove(slotChanged);
+                }
+                RemoveRackmountButton(slotChanged);
+            }
+           
+        }
+
         private void AddCrew()
         {
             //sets crew to starting capacity.
@@ -326,20 +335,9 @@ namespace RackMount
                 {
                     bool mounted = false;
                     inv.storedParts.At(i).snapshot.partData.TryGetValue("partRackmounted", ref mounted);
-                    if (mounted)
-                    {
-                        ConfigNode partConfig = inv.storedParts.At(i).snapshot.partInfo.partConfig;
 
-                        //iterates through all modules on the stored part.
-                        foreach (ConfigNode moduleConfigNode in partConfig.GetNodes("MODULE"))
-                        {
-                            //ModuleRackMountPart adjustments
-                            if (moduleConfigNode.GetValue("name") == "ModuleRackMountPart")
-                                //add crew seat.
-                                if (moduleConfigNode.HasValue("crewSeat"))
-                                    part.CrewCapacity += int.Parse(moduleConfigNode.GetValue("crewSeat"));
-                        }
-                    }
+                    if (mounted)
+                        part.CrewCapacity += inv.storedParts.At(i).snapshot.partPrefab.Modules.GetModule<ModuleRackMountPart>().numCrewSeats;
                 }
             }
 
@@ -379,22 +377,12 @@ namespace RackMount
         //adds button for mounting and unmounting parts
         private void AddRackmountButton(StoredPart storedPart)
         {
-            ConfigNode partConfig = storedPart.snapshot.partInfo.partConfig;
-            ConfigNode rackMountPart = partConfig.GetNode("MODULE", "name", "ModuleRackMountPart");
-
-            string requiresPartType = "";
-
-            //some parts can only be mounted/unmounted in the editor
-            bool mountInEditorOnly = false;
-            rackMountPart.TryGetValue("mountInEditorOnly", ref mountInEditorOnly);
-
-            if (rackMountPart != null && (HighLogic.LoadedSceneIsEditor || !mountInEditorOnly))
+            ModuleRackMountPart moduleRackMountPart = storedPart.snapshot.partPrefab.Modules.GetModule<ModuleRackMountPart>();
+            
+            if(moduleRackMountPart != null && (HighLogic.LoadedSceneIsEditor || !moduleRackMountPart.mountInEditorOnly))
             {
-                rackMountPart.TryGetValue("requiresPartType", ref requiresPartType);
-                if (requiresPartType == "" || partType.ToUpper() == "ANY" || requiresPartType.ToUpper() == partType.ToUpper())
+                if(moduleRackMountPart.requiresPartType == "" || partType.ToUpper() == "ANY" || moduleRackMountPart.requiresPartType.ToUpper() == partType.ToUpper())
                 {
-                    rackMountableParts.Add(storedPart.snapshot.persistentId, storedPart.slotIndex);
-
                     KSPEvent mount = new KSPEvent
                     {
                         name = "RackmountButton" + storedPart.slotIndex,
@@ -410,25 +398,22 @@ namespace RackMount
                     RackmountButton.group = rackmountGroup;
                     Events.Add(RackmountButton);
                 }
-                else if (!unMountableParts.ContainsKey(storedPart.snapshot.persistentId))
-                {
-                    unMountableParts.Add(storedPart.snapshot.persistentId, storedPart.slotIndex);
-                    if (partType == "")
-                        ScreenMessages.PostScreenMessage("<color=orange>Part " + storedPart.snapshot.partInfo.title + " can only be mounted on part type of " +
-                            rackMountPart.GetValue("requiresPartType") + "!</color>\nIt is currently stored in part without a part type.", 7);
-                    else
-                        ScreenMessages.PostScreenMessage("<color=orange>Part " + storedPart.snapshot.partInfo.title + " can only be mounted on part type of " +
-                            rackMountPart.GetValue("requiresPartType") + "!</color>\nIt is currently stored in a part type of " + partType + ".", 7);
-                }
-            }
+                else if (partType == "")
+                    ScreenMessages.PostScreenMessage("<color=orange>Part " + storedPart.snapshot.partInfo.title + " can only be mounted on part type of " +
+                        moduleRackMountPart.requiresPartType + "!</color>\nIt is currently stored in part without a part type.", 7);
+                else
+                    ScreenMessages.PostScreenMessage("<color=orange>Part " + storedPart.snapshot.partInfo.title + " can only be mounted on part type of " +
+                        moduleRackMountPart.requiresPartType + "!</color>\nIt is currently stored in a part type of " + partType + ".", 7);
+            }    
         }
 
-        private void RemoveRackmountButton(uint id, int slot)
+        private void RemoveRackmountButton(int slotChanged)
         {
-            Events.Find(x => x.name == "RackmountButton" + slot).active = false;
-            Events.Remove(Events.Find(x => x.name == "RackmountButton" + slot));
-
-            rackMountableParts.Remove(id);
+            if (Events.Find(x => x.name == "RackmountButton" + slotChanged) != null)
+            {
+                Events.Find(x => x.name == "RackmountButton" + slotChanged).active = false;
+                Events.Remove(Events.Find(x => x.name == "RackmountButton" + slotChanged));
+            }
         }
 
         private void RackmountButtonPressed(StoredPart storedPart)
@@ -441,13 +426,21 @@ namespace RackMount
                 {
                     //checks for running KERBALISM.ProcessControllers
                     //can't unmount if they are running.
-                    if(HasRunningProcessController(storedPart))
+                    if (HasRunningProcessController(storedPart))
                         ScreenMessages.PostScreenMessage("<color=orange>A Kerbalism Process Controller is running!</color>\n\nYou cannot unmount this part until you turn this process off.", 7);
+                    //blocks changes when the crew editor is open
+                    else if (HighLogic.LoadedSceneIsEditor && EditorLogic.fetch.editorScreen == EditorScreen.Crew)
+                        ScreenMessages.PostScreenMessage("<color=orange>The Crew Picker is open!</color>\n\nYou cannot unmount this part until you close this window.", 7);
                     else
                         UnmountPart(storedPart);
                 }
                 else
-                    RackmountPart(storedPart);
+                {
+                    if (HighLogic.LoadedSceneIsEditor && EditorLogic.fetch.editorScreen == EditorScreen.Crew)
+                        ScreenMessages.PostScreenMessage("<color=orange>The Crew Picker is open!</color>\n\nYou cannot mount this part until you close this window.", 7);
+                    else
+                        RackmountPart(storedPart);
+                }
             }
             else
             {
@@ -456,25 +449,21 @@ namespace RackMount
                 else
                     ScreenMessages.PostScreenMessage("<color=orange>You need a Kerbal to rackmount or unmount parts while in flight!</color>\n\nYou need a Kerbal either on the vessel or on EVA near by", 7);
             }
-
+            if (part.PartActionWindow != null)
+                part.PartActionWindow.displayDirty = true;
         }
 
         //ModuleRackMountPart adjustments and
         //changes to the host part
-        private void RackMountAdjusters(ConfigNode moduleConfigNode)
+        private void RackMountAdjusters(StoredPart storedPart)
         {
             //increments hasAirlock
             //done like this in case multiple airlocks are added
-            if(moduleConfigNode.HasValue("hasAirlock"))
-            {
-                bool hasAirlock = false;
-                moduleConfigNode.TryGetValue("hasAirlock", ref hasAirlock);
-                if (hasAirlock)
-                    partHasAirlock++;
-            }
-
+            if (storedPart.snapshot.partPrefab.Modules.GetModule<ModuleRackMountPart>().hasAirlock)
+                partHasAirlock++;
+            
             //add crew seat.
-            if (moduleConfigNode.HasValue("crewSeat"))
+            if(storedPart.snapshot.partPrefab.Modules.GetModule<ModuleRackMountPart>().numCrewSeats>0)
             {
                 AddCrew();
 
@@ -505,21 +494,24 @@ namespace RackMount
         private void RackmountPart(StoredPart storedPart)
         {
             bool rackMountable;
+
             ConfigNode partConfig = storedPart.snapshot.partInfo.partConfig;
-            
+
+            //ModuleB9PartSwitch cannot be mounted directly, workaround to mount
+            //configured resources
+            bool mountB9Resources = storedPart.snapshot.partPrefab.Modules.GetModule<ModuleRackMountPart>().mountB9Resources;
+
             ConfigNode addedModules = new ConfigNode();
             int storedPartModuleIndex = 0;
 
             //rackmounted!
             storedPart.snapshot.partData.SetValue("partRackmounted", true, true);
 
+            RackMountAdjusters(storedPart);
+
             //iterates through all modules on the stored part.
             foreach (ConfigNode moduleConfigNode in partConfig.GetNodes("MODULE"))
             {
-                //ModuleRackMountPart adjustments
-                if (moduleConfigNode.GetValue("name") == "ModuleRackMountPart")
-                    RackMountAdjusters(moduleConfigNode);
-
                 //mount modules
                 rackMountable = false;
                 moduleConfigNode.TryGetValue("rackMountable", ref rackMountable);
@@ -543,9 +535,7 @@ namespace RackMount
 
                         //wake up Kerbalism Experiments
                         if (availablePartModule.moduleName == "Experiment")
-                        {
                             availablePartModule.OnStart(StartState.None);
-                        }
 
                         availablePart.partPrefab.gameObject.SetActive(value: false);
                         availablePart.partConfig.AddNode(moduleConfigNode);
@@ -609,27 +599,26 @@ namespace RackMount
             foreach (var resource in storedPart.snapshot.resources)
             {
                 rackMountable = false;
+
                 var configNode = storedPart.snapshot.partInfo.partConfig.GetNode("RESOURCE", "name", resource.resourceName);
                 if (configNode != null)
-                {
                     configNode.TryGetValue("rackMountable", ref rackMountable);
-                    var partResource = part.Resources.Get(resource.resourceName);
 
-                    if (partResource != null && rackMountable)
-                    {
-                        partResource.maxAmount += resource.maxAmount;
-                        partResource.amount += resource.amount;
-                        resource.amount = 0;
-                        if(part.PartActionWindow != null)
-                            part.PartActionWindow.displayDirty = true;
-                    }
-                    else if (rackMountable)
-                    {
-                        resource.Load(part);
-                        resource.amount = 0;
-                        if (part.PartActionWindow != null)
-                            part.PartActionWindow.displayDirty = true;
-                    }
+                var partResource = part.Resources.Get(resource.resourceName);
+                if (partResource != null && (rackMountable || mountB9Resources))
+                {
+                    partResource.maxAmount += resource.maxAmount;
+                    partResource.amount += resource.amount;
+                    resource.amount = 0;
+                    if (part.PartActionWindow != null)
+                        part.PartActionWindow.displayDirty = true;
+                }
+                else if (rackMountable || mountB9Resources)
+                {
+                    resource.Load(part);
+                    resource.amount = 0;
+                    if (part.PartActionWindow != null)
+                        part.PartActionWindow.displayDirty = true;
                 }
             }
 
@@ -642,21 +631,21 @@ namespace RackMount
         }
 
         //removes part adjusters
-        private bool UnmountAdjusters(ConfigNode moduleConfigNode)
+        private bool UnmountAdjusters(ModuleRackMountPart moduleRackMountPart)
         {
             //tries to remove a seat, returns false if occupied
             //will need to be rethought if other part adjusters can
             //also fail to avoid partial removal
-            if (moduleConfigNode.HasValue("crewSeat"))
+            if (moduleRackMountPart.numCrewSeats > 0)
             {
                 //checks to see if seat is full
-                if (part.protoModuleCrew.Count > part.CrewCapacity - int.Parse(moduleConfigNode.GetValue("crewSeat")))
+                if (part.protoModuleCrew.Count > part.CrewCapacity - moduleRackMountPart.numCrewSeats)
                 {
                     ScreenMessages.PostScreenMessage($"<color=orange>The seat is still being used! </color>\n\nYou cannot unmount this part, a kerbal is still sitting in it.", 7);
                     return false;
                 }
 
-                part.CrewCapacity -= int.Parse(moduleConfigNode.GetValue("crewSeat"));
+                part.CrewCapacity -= moduleRackMountPart.numCrewSeats;
 
                 //adjusts crew manifest
                 if (ShipConstruction.ShipManifest != null)
@@ -669,18 +658,18 @@ namespace RackMount
                         newCrew[i] = manifest.partCrew[i];
 
                     //returns 'end' crew to free roster
-                    for (int i = manifest.partCrew.Length - int.Parse(moduleConfigNode.GetValue("crewSeat")); i < manifest.partCrew.Length; i++)
+                    for (int i = manifest.partCrew.Length - moduleRackMountPart.numCrewSeats; i < manifest.partCrew.Length; i++)
                         ShipConstruction.ShipManifest.RemoveCrewMember(manifest.partCrew[i]);
 
                     manifest.partCrew = newCrew;
                     manifest.PartInfo.partPrefab.CrewCapacity = part.CrewCapacity;
                     manifest.PartInfo.partConfig.SetValue("CrewCapacity", part.CrewCapacity);
                 }
+
             }
 
-            bool hasAirlock = false;
-            moduleConfigNode.TryGetValue("hasAirlock", ref hasAirlock);
-            if (hasAirlock)
+            //remove airlock
+            if (moduleRackMountPart.hasAirlock)
                 partHasAirlock--;
 
             return true;
@@ -689,16 +678,13 @@ namespace RackMount
         //unmounting mounted modules and undo part adjusters
         private void UnmountPart(StoredPart storedPart)
         {
+            //ModuleB9PartSwitch cannot be mounted directly, workaround to mount
+            //configured resources
+            bool mountB9Resources = storedPart.snapshot.partPrefab.Modules.GetModule<ModuleRackMountPart>().mountB9Resources;
+
             //undo ModuleRackMountPart adjustments
-            ConfigNode partConfig = storedPart.snapshot.partInfo.partConfig;
-            foreach (ConfigNode moduleConfigNode in partConfig.GetNodes("MODULE"))
-            {
-                //adjust host part.
-                //returning false aborts unmount.
-                if (moduleConfigNode.GetValue("name") == "ModuleRackMountPart")
-                    if (!UnmountAdjusters(moduleConfigNode))
-                        return;
-            }
+            if (!UnmountAdjusters(storedPart.snapshot.partPrefab.Modules.GetModule<ModuleRackMountPart>()))
+                return;
 
             //create list of items to remove
             List<PartModule> removeModules = new List<PartModule>();
@@ -765,21 +751,22 @@ namespace RackMount
             {
                 bool rackMountable = false;
                 var configNode = storedPart.snapshot.partInfo.partConfig.GetNode("RESOURCE", "name", resource.resourceName);
+
                 //checks for resources in storedPart config
                 if (configNode != null)
-                {
                     configNode.TryGetValue("rackMountable", ref rackMountable);
 
-                    PartResource storedResource = part.Resources.Get(resource.resourceName);
-                    if (storedResource != null && rackMountable)
-                    {
-                        resource.amount = storedResource.amount * (resource.maxAmount / storedResource.maxAmount);
-                        storedResource.amount -= resource.amount;
-                        storedResource.maxAmount -= resource.maxAmount;
-                        if (part.PartActionWindow != null)
-                            part.PartActionWindow.displayDirty = true;
-                    }
+                PartResource storedResource = part.Resources.Get(resource.resourceName);
+
+                if (storedResource != null && (rackMountable || mountB9Resources))
+                {
+                    resource.amount = storedResource.amount * (resource.maxAmount / storedResource.maxAmount);
+                    storedResource.amount -= resource.amount;
+                    storedResource.maxAmount -= resource.maxAmount;
+                    if (part.PartActionWindow != null)
+                        part.PartActionWindow.displayDirty = true;
                 }
+                
             }
             storedPart.snapshot.partData.SetValue("partRackmounted", false, true);
 
@@ -831,13 +818,64 @@ namespace RackMount
                 else
                     return false;
             }
-
+            
             //finally check onboard crew
-            foreach (var crew in vessel.GetVesselCrew())
-                if (!HighLogic.CurrentGame.Parameters.CustomParams<RackMountSettings>().requiresEngineer || crew.trait == "Engineer")
-                    return true;
+            if (!HighLogic.CurrentGame.Parameters.CustomParams<RackMountSettings>().requiresEngineer || vessel.GetVesselCrew().Exists(x => x.trait == "Engineer"))
+                return true;
 
             return false;
+        }
+        
+        //harmony patches
+        [HarmonyPatch(typeof(UIPartActionInventorySlot), "OnPointerClick")]
+        internal class OnPointerClickPrefix
+        {
+            //checks to see if it host part is already mounted and halts the 'click'
+            public static bool Prefix(PointerEventData eventData, UIPartActionInventorySlot __instance)
+            {
+                bool mounted = false;
+
+                if (__instance.inventoryPartActionUI.inventoryPartModule.part.FindModuleImplementing<ModuleRackMount>())
+                {
+                    ModuleInventoryPart inv = __instance.inventoryPartActionUI.inventoryPartModule.part.FindModuleImplementing<ModuleRackMount>().inv;
+
+                    StoredPart storedPart;
+
+                    if (inv.storedParts.TryGetValue(__instance.slotIndex, out storedPart))
+                        storedPart.snapshot.partData.TryGetValue("partRackmounted", ref mounted);
+
+                    if (mounted && eventData.button != PointerEventData.InputButton.Right)
+                    {
+                        ScreenMessages.PostScreenMessage("<color=orange>This part is RackMounted!</color>\n\nYou cannot move or remove it until it has been Unmounted", 7);
+
+                        return false;
+                    }
+                }
+                return true;
+            }
+        }
+
+        [HarmonyPatch(typeof(UIPartActionInventory), "OnModuleInventorySlotChanged")]
+        internal class OnModuleInventorySlotChangedPostfix
+        {
+            //calls UpdateRackmountButtons whenever a ModuleRackMount inventory is changed.
+            public static void Postfix(ModuleInventoryPart inventory, int slotChanged, UIPartActionInventory __instance)
+            {
+                //blocks kerbalEVA parts triggering update when their own kit is added to the part inventory.
+                if (__instance.inventoryPartModule.part.FindModuleImplementing<ModuleRackMount>() != null && __instance.Part == inventory.part)
+                    __instance.inventoryPartModule.part.FindModuleImplementing<ModuleRackMount>().UpdateRackmountButtons(__instance, slotChanged);
+
+            }
+        }
+
+        [HarmonyPatch(typeof(UIPartActionInventory), "Setup")]
+        internal class InventorySetupPostfix
+        {
+            public static void Postfix(UIPartActionInventory __instance)
+            {
+                if (__instance.Part.FindModuleImplementing<ModuleRackMount>() != null && __instance.Part == __instance.inventoryPartModule.part)
+                    __instance.Part.FindModuleImplementing<ModuleRackMount>().SetupIcons(__instance);
+            }
         }
     }
 }

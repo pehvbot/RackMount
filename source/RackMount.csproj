@@ -68,11 +68,14 @@
     <Reference Include="UnityEngine.InputModule">
       <HintPath>..\dlls_1_12_2\UnityEngine.InputModule.dll</HintPath>
     </Reference>
-    <Reference Include="0Harmony">
-      <HintPath>..\..\..\..\Downloads\KSPCommunityFixes-master\KSPCommunityFixes\lib\0Harmony.dll</HintPath>
-    </Reference>
     <Reference Include="HarmonyInstallChecker">
       <HintPath>..\..\KSP RackMount\GameData\000_Harmony\HarmonyInstallChecker.dll</HintPath>
+    </Reference>
+    <Reference Include="0Harmony">
+      <HintPath>..\dlls_1_12_2\0Harmony.dll</HintPath>
+    </Reference>
+    <Reference Include="UnityEngine.AssetBundleModule">
+      <HintPath>..\dlls_1_12_2\UnityEngine.AssetBundleModule.dll</HintPath>
     </Reference>
   </ItemGroup>
   <ItemGroup>
@@ -86,6 +89,7 @@
     <Compile Include="GameLoadPatchs.cs" />
     <Compile Include="ModuleCommandProbe.cs" />
     <Compile Include="RackmountedControlSources.cs" />
+    <Compile Include="VABOrganizer.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
 </Project>

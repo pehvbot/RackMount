@@ -144,6 +144,22 @@ namespace RackMount
             }
             return Mathf.Abs(volume);
         }
+
+        public static float CalculateEmptyMass(Part part, float massSurfaceArea)
+        {
+            //bullshit number for 'thickness' of the walls based on temp and crash tolerance
+            //defaults used to normalize maxTemp and crashTolerance
+            //weighs crashTolerance at 4x maxTemp for mass
+            double partThickness = (((part.maxTemp / 2000) + (part.crashTolerance / 9) * 4) / 5);
+            partThickness = 2.5 / (1 + Math.Exp(-0.5 * (partThickness - 3))) + .5;
+
+            double calculatedMass = CalculateSurfaceArea(part) * partThickness * massSurfaceArea;
+            int round = 1;
+            if (calculatedMass < 1) round = 2;
+            if (calculatedMass < 0.1) round = 3;
+            return (float)Math.Round(calculatedMass, round);
+        }
+     
     }
 }
 

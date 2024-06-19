@@ -14,13 +14,16 @@ namespace RackMount
         public string requiresPartType = "";
 
         [KSPField]
-        public int crewSeat = 0;
+        public int numCrewSeats = 0;
 
         [KSPField]
         public bool hasAirlock;
 
         [KSPField]
         public bool mountInEditorOnly = false;
+
+        [KSPField]
+        public bool mountB9Resources = false;
 
         public override void OnLoad(ConfigNode node)
         {

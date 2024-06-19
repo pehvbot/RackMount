@@ -152,6 +152,7 @@ namespace RackMount
             }
         }
 
+        /*
         //this should really be something KSP itself looks for.
         //currently missing stored parts will crash the game load.
         //[TODO] use the KSP missing parts handling code instead of this.
@@ -195,7 +196,7 @@ namespace RackMount
                 }
             }
             return saveFile;
-        }
+        }*/
     }
 
     [HarmonyPatch(typeof(QuickSaveLoad), "quickLoad")]
@@ -204,7 +205,7 @@ namespace RackMount
         public static void Prefix()
         {
             ConfigNode saveFile = ConfigNode.Load(KSPUtil.ApplicationRootPath + "saves/" + HighLogic.SaveFolder + "/" + Localizer.Format("#autoLOC_6002266") + ".sfs");
-            saveFile = OnGameLoadPatch.RemoveMissingInventoryParts(saveFile);
+            //saveFile = OnGameLoadPatch.RemoveMissingInventoryParts(saveFile);
             saveFile = OnGameLoadPatch.AddPartsFromSave(saveFile);
             saveFile.Save(KSPUtil.ApplicationRootPath + "saves/" + HighLogic.SaveFolder + "/" + Localizer.Format("#autoLOC_6002266") + ".sfs");
         }
@@ -236,7 +237,7 @@ namespace RackMount
             }
 
             ConfigNode saveFile = ConfigNode.Load(KSPUtil.ApplicationRootPath + "saves/" + directory + "/" + selectedGame + ".sfs");
-            saveFile = OnGameLoadPatch.RemoveMissingInventoryParts(saveFile);
+            //saveFile = OnGameLoadPatch.RemoveMissingInventoryParts(saveFile);
             saveFile = OnGameLoadPatch.AddPartsFromSave(saveFile);
             saveFile.Save(KSPUtil.ApplicationRootPath + "saves/" + directory + "/" + selectedGame + ".sfs");
         }
