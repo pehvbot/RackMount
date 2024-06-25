@@ -6,6 +6,7 @@ using UnityEngine.EventSystems;
 using KSP.UI.Screens;
 using UnityEngine.UI;
 using TMPro;
+using UnityEngine.Events;
 
 namespace RackMount
 {
@@ -246,6 +247,8 @@ namespace RackMount
             }
         }
 
+        //taken from VABOrganizer by Nertea
+        //https://github.com/post-kerbin-mining-corporation/VABOrganizer/
         private void SetupIcon(EditorPartIcon icon, int slot)
         {
             if (!icon.partInfo.partPrefab.Modules.Contains<ModuleRackMountPart>()
@@ -257,8 +260,7 @@ namespace RackMount
             if(!images.ContainsKey(slot))
                 images.Add(slot, swatch);
 
-            swatch.sprite = VABOrganizerAssets.Sprites["organizer-carat"];
-            swatch.type = Image.Type.Sliced;
+            swatch.type = Image.Type.Simple;
             swatch.gameObject.SetLayerRecursive(LayerMask.NameToLayer("UI"));
 
             bool mounted = false;
@@ -300,6 +302,7 @@ namespace RackMount
             rect.anchorMin = rect.anchorMax = rect.pivot = Vector2.zero;
             rect.offsetMin = new Vector2(3, 48);
             rect.offsetMax = new Vector2(16, 64);
+
         }
 
         //called by Harmony OnModuleInventorySlotChangedPrefix to update buttons
@@ -497,9 +500,9 @@ namespace RackMount
 
             ConfigNode partConfig = storedPart.snapshot.partInfo.partConfig;
 
-            //ModuleB9PartSwitch cannot be mounted directly, workaround to mount
+            //Kerbalism Configure resources cannot be mounted directly, workaround to mount
             //configured resources
-            bool mountB9Resources = storedPart.snapshot.partPrefab.Modules.GetModule<ModuleRackMountPart>().mountB9Resources;
+            bool mountKerbalismResources = storedPart.snapshot.partPrefab.Modules.GetModule<ModuleRackMountPart>().mountKerbalismResources;
 
             ConfigNode addedModules = new ConfigNode();
             int storedPartModuleIndex = 0;
@@ -508,6 +511,9 @@ namespace RackMount
             storedPart.snapshot.partData.SetValue("partRackmounted", true, true);
 
             RackMountAdjusters(storedPart);
+
+            var loadedScene = HighLogic.LoadedScene;
+            HighLogic.LoadedScene = GameScenes.LOADING;
 
             //iterates through all modules on the stored part.
             foreach (ConfigNode moduleConfigNode in partConfig.GetNodes("MODULE"))
@@ -594,7 +600,8 @@ namespace RackMount
                 }
                 storedPartModuleIndex++;
             }
-            
+            HighLogic.LoadedScene = loadedScene;
+
             //add or increases resource on part
             foreach (var resource in storedPart.snapshot.resources)
             {
@@ -605,7 +612,7 @@ namespace RackMount
                     configNode.TryGetValue("rackMountable", ref rackMountable);
 
                 var partResource = part.Resources.Get(resource.resourceName);
-                if (partResource != null && (rackMountable || mountB9Resources))
+                if (partResource != null && (rackMountable || mountKerbalismResources))
                 {
                     partResource.maxAmount += resource.maxAmount;
                     partResource.amount += resource.amount;
@@ -613,7 +620,7 @@ namespace RackMount
                     if (part.PartActionWindow != null)
                         part.PartActionWindow.displayDirty = true;
                 }
-                else if (rackMountable || mountB9Resources)
+                else if (rackMountable || mountKerbalismResources)
                 {
                     resource.Load(part);
                     resource.amount = 0;
@@ -678,9 +685,9 @@ namespace RackMount
         //unmounting mounted modules and undo part adjusters
         private void UnmountPart(StoredPart storedPart)
         {
-            //ModuleB9PartSwitch cannot be mounted directly, workaround to mount
+            //Kerbalism Configure resources cannot be mounted directly, workaround to mount
             //configured resources
-            bool mountB9Resources = storedPart.snapshot.partPrefab.Modules.GetModule<ModuleRackMountPart>().mountB9Resources;
+            bool mountKerbalismResources = storedPart.snapshot.partPrefab.Modules.GetModule<ModuleRackMountPart>().mountKerbalismResources;
 
             //undo ModuleRackMountPart adjustments
             if (!UnmountAdjusters(storedPart.snapshot.partPrefab.Modules.GetModule<ModuleRackMountPart>()))
@@ -758,7 +765,7 @@ namespace RackMount
 
                 PartResource storedResource = part.Resources.Get(resource.resourceName);
 
-                if (storedResource != null && (rackMountable || mountB9Resources))
+                if (storedResource != null && (rackMountable || mountKerbalismResources))
                 {
                     resource.amount = storedResource.amount * (resource.maxAmount / storedResource.maxAmount);
                     storedResource.amount -= resource.amount;

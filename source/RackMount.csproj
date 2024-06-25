@@ -89,7 +89,6 @@
     <Compile Include="GameLoadPatchs.cs" />
     <Compile Include="ModuleCommandProbe.cs" />
     <Compile Include="RackmountedControlSources.cs" />
-    <Compile Include="VABOrganizer.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
 </Project>

@@ -50,6 +50,11 @@ namespace RackMount
         //create a new part based on a confignode
         public static AvailablePart CreatePart(UrlConfig urlConfig, ConfigNode partConfig)
         {
+            //set scene to the loading scene
+            //to run initial part loading setups
+            var loadedScene = HighLogic.LoadedScene;
+            HighLogic.LoadedScene = GameScenes.LOADING;
+
             AvailablePart available = ParsePart(PartLoader.Instance, urlConfig, partConfig);
 
             //not sure if necessary, cargo cult like programming...
@@ -84,14 +89,15 @@ namespace RackMount
             APFinderByIcon.SetValue(roValue, available, new[] { available.iconPrefab });
 
             //wake up any Kerbalism Experiments
-            foreach(var module in available.partPrefab.Modules)
+            foreach (var module in available.partPrefab.Modules)
             {
                 if (module.moduleName == "Experiment")
                     module.OnStart(PartModule.StartState.None);
             }
 
-            Debug.Log("[RM] CreatePart: " + PartLoader.getPartInfoByName(available.name).name);
+            HighLogic.LoadedScene = loadedScene;
 
+            Debug.Log("[RM] CreatePart: " + PartLoader.getPartInfoByName(available.name).name);
             return available;
         }
     }

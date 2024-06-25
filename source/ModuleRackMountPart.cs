@@ -23,7 +23,7 @@ namespace RackMount
         public bool mountInEditorOnly = false;
 
         [KSPField]
-        public bool mountB9Resources = false;
+        public bool mountKerbalismResources = false;
 
         public override void OnLoad(ConfigNode node)
         {
