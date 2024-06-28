@@ -206,6 +206,8 @@ namespace RackMount
         {
             ConfigNode saveFile = ConfigNode.Load(KSPUtil.ApplicationRootPath + "saves/" + HighLogic.SaveFolder + "/" + Localizer.Format("#autoLOC_6002266") + ".sfs");
             //saveFile = OnGameLoadPatch.RemoveMissingInventoryParts(saveFile);
+            if (saveFile is null)
+                return;
             saveFile = OnGameLoadPatch.AddPartsFromSave(saveFile);
             saveFile.Save(KSPUtil.ApplicationRootPath + "saves/" + HighLogic.SaveFolder + "/" + Localizer.Format("#autoLOC_6002266") + ".sfs");
         }

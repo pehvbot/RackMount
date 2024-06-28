@@ -22,8 +22,9 @@ namespace RackMount
         [KSPField]
         public bool mountInEditorOnly = false;
 
+        //used so B9PartSwitch resources can be added.
         [KSPField]
-        public bool mountKerbalismResources = false;
+        public bool allResourcesRackmountable = false;
 
         public override void OnLoad(ConfigNode node)
         {

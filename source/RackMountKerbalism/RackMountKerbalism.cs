@@ -33,9 +33,9 @@ namespace RackMount
             double currentCapacity = 0.0;
             double maxCapacity = 0.0;
 
-            foreach(ProcessController controller in p.Modules.GetModules<ProcessController>())
+            foreach (ProcessController controller in p.Modules.GetModules<ProcessController>())
             {
-                if(controller.resource == res_name)
+                if (controller.resource == res_name)
                 {
                     Type t = controller.GetType();
                     FieldInfo info = t.GetField("broken", BindingFlags.NonPublic | BindingFlags.Instance);
@@ -49,7 +49,7 @@ namespace RackMount
             if (currentCapacity > 0.0 && maxCapacity > 0.0)
             {
                 Lib.SetResource(p, res_name, currentCapacity, currentCapacity);
-            }      
+            }
         }
     }
 }
